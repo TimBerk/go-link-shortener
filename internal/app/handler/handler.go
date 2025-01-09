@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	stores "github.com/TimBerk/go-link-shortener/internal/app/store"
 
 	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
@@ -52,7 +52,7 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL := strings.TrimPrefix(r.URL.Path, "/")
+	shortURL := chi.URLParam(r, "id")
 	originalURL, exists := h.store.GetOriginalURL(shortURL)
 	if !exists {
 		http.Error(w, "Short URL not found", http.StatusNotFound)
