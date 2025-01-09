@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,8 +26,9 @@ func (m *MockStore) AddURL(url string) string {
 }
 
 func TestShortenURL_Success(t *testing.T) {
+	mockConfig := config.NewConfig("localhost:8021", "http://base.url")
 	mockStore := &MockStore{}
-	handler := NewHandler(mockStore)
+	handler := NewHandler(mockStore, mockConfig)
 	body := strings.NewReader("https://example.com")
 	req := httptest.NewRequest(http.MethodPost, "/shorten", body)
 	req.Header.Set("Content-Type", "text/plain")
@@ -35,16 +37,17 @@ func TestShortenURL_Success(t *testing.T) {
 	handler.ShortenURL(w, req)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
-	expectedResponse := "http://localhost:8080/abc123"
+	expectedResponse := "http://localhost:8021/abc123"
 	assert.Equal(t, expectedResponse, w.Body.String())
 }
 
 func TestRedirect_Success(t *testing.T) {
+	mockConfig := config.NewConfig("localhost:8021", "http://base:url")
 	mockStore := &MockStore{
 		originalURL: "https://example.com",
 		exists:      true,
 	}
-	handler := NewHandler(mockStore)
+	handler := NewHandler(mockStore, mockConfig)
 	req := httptest.NewRequest(http.MethodGet, "/abc123", nil)
 	w := httptest.NewRecorder()
 

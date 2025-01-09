@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -25,8 +26,9 @@ func (m *MockURLStore) GetOriginalURL(shortURL string) (string, bool) {
 }
 
 func TestShortenURL(t *testing.T) {
+	mockConfig := config.NewConfig("localhost:8021", "http://base.loc")
 	mockStore := new(MockURLStore)
-	testHandler := NewHandler(mockStore)
+	testHandler := NewHandler(mockStore, mockConfig)
 
 	tests := []struct {
 		name               string
@@ -44,7 +46,15 @@ func TestShortenURL(t *testing.T) {
 			body:               "https://example.com",
 			mockReturnShortURL: "short1",
 			expectedStatus:     http.StatusCreated,
-			expectedResponse:   "http://localhost:8080/short1",
+			expectedResponse:   "http://localhost:8021/short1",
+		},
+		{
+			name:               "Empty body",
+			method:             http.MethodPost,
+			contentType:        "text/plain",
+			mockReturnShortURL: "short2",
+			expectedStatus:     http.StatusCreated,
+			expectedResponse:   "http://localhost:8021/short2",
 		},
 		{
 			name:             "Invalid request method",
@@ -67,7 +77,11 @@ func TestShortenURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.mockReturnShortURL != "" {
-				mockStore.On("AddURL", test.body).Return(test.mockReturnShortURL)
+				usedParam := test.body
+				if usedParam == "" {
+					usedParam = mockConfig.BaseURL
+				}
+				mockStore.On("AddURL", usedParam).Return(test.mockReturnShortURL)
 			}
 			req := httptest.NewRequest(test.method, "/shorten", bytes.NewBufferString(test.body))
 			req.Header.Set("Content-Type", test.contentType)
