@@ -1,8 +1,18 @@
-package shortener
+package store
 
 import (
 	"math/rand"
 )
+
+type URLStore struct {
+	linksMap map[string]string
+}
+
+func NewURLStore() *URLStore {
+	return &URLStore{
+		linksMap: make(map[string]string),
+	}
+}
 
 const (
 	letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -10,7 +20,7 @@ const (
 	length  = 6
 )
 
-func (s *URLStore) generateID() string {
+var generateIDFunc = func() string {
 	chars := letters + digits
 
 	id := make([]byte, length)
@@ -19,6 +29,15 @@ func (s *URLStore) generateID() string {
 	}
 
 	return string(id)
+}
+
+func (s *URLStore) generateID() string {
+	return generateIDFunc()
+}
+
+type URLStoreInterface interface {
+	AddURL(originalURL string) string
+	GetOriginalURL(shortURL string) (string, bool)
 }
 
 func (s *URLStore) AddURL(originalURL string) string {

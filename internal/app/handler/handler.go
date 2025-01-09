@@ -1,4 +1,4 @@
-package shortener
+package handler
 
 import (
 	"fmt"
@@ -6,14 +6,16 @@ import (
 	"net/http"
 	"strings"
 
+	stores "github.com/TimBerk/go-link-shortener/internal/app/store"
+
 	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
 )
 
 type Handler struct {
-	store *URLStore
+	store stores.URLStoreInterface
 }
 
-func NewHandler(store *URLStore) *Handler {
+func NewHandler(store stores.URLStoreInterface) *Handler {
 	return &Handler{store: store}
 }
 

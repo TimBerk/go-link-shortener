@@ -4,12 +4,13 @@ import (
 	"log"
 	"net/http"
 
-	shortener "github.com/TimBerk/go-link-shortener/internal/app"
+	"github.com/TimBerk/go-link-shortener/internal/app/handler"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
 func main() {
-	store := shortener.NewURLStore()
-	handler := shortener.NewHandler(store)
+	store := store.NewURLStore()
+	handler := handler.NewHandler(store)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
