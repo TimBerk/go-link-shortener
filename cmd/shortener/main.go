@@ -12,7 +12,8 @@ import (
 
 func main() {
 	cfg := config.InitConfig()
-	store := store.NewURLStore()
+	generator := store.NewIDGenerator()
+	store := store.NewURLStore(generator)
 	handler := handler.NewHandler(store, cfg)
 
 	router := chi.NewRouter()

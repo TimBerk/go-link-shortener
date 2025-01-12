@@ -4,25 +4,28 @@ import (
 	"math/rand"
 )
 
-type URLStore struct {
-	linksMap map[string]string
-}
-
-func NewURLStore() *URLStore {
-	return &URLStore{
-		linksMap: make(map[string]string),
-	}
-}
-
 const (
-	letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	digits  = "0123456789"
-	length  = 6
+	chars  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	length = 6
 )
 
-var generateIDFunc = func() string {
-	chars := letters + digits
+type IDGenerator struct{}
 
+type Generator interface {
+	Next() string
+}
+
+type URLStore struct {
+	linksMap    map[string]string
+	originalMap map[string]string
+	gen         Generator
+}
+
+func NewIDGenerator() Generator {
+	return &IDGenerator{}
+}
+
+func (g *IDGenerator) Next() string {
 	id := make([]byte, length)
 	for i := range id {
 		id[i] = chars[rand.Intn(len(chars))]
@@ -31,8 +34,12 @@ var generateIDFunc = func() string {
 	return string(id)
 }
 
-func (s *URLStore) generateID() string {
-	return generateIDFunc()
+func NewURLStore(gen Generator) *URLStore {
+	return &URLStore{
+		linksMap:    make(map[string]string),
+		originalMap: make(map[string]string),
+		gen:         gen,
+	}
 }
 
 type URLStoreInterface interface {
@@ -41,14 +48,18 @@ type URLStoreInterface interface {
 }
 
 func (s *URLStore) AddURL(originalURL string) string {
-	for shortURL, url := range s.linksMap {
-		if url == originalURL {
-			return shortURL
-		}
+	if shortURL, exists := s.originalMap[originalURL]; exists {
+		return shortURL
 	}
 
-	shortURL := s.generateID()
+	shortURL := s.gen.Next()
+
+	if _, exists := s.linksMap[shortURL]; exists {
+		return s.AddURL(originalURL)
+	}
+
 	s.linksMap[shortURL] = originalURL
+	s.originalMap[originalURL] = shortURL
 	return shortURL
 }
 

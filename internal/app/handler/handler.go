@@ -22,11 +22,6 @@ func NewHandler(store stores.URLStoreInterface, cfg *config.Config) *Handler {
 }
 
 func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
 	if !utils.CheckParamInHeaderParam(r, "Content-Type", "text/plain") {
 		http.Error(w, "Invalid Content-Type", http.StatusBadRequest)
 		return
@@ -40,7 +35,8 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	originalURL := string(body)
 	if originalURL == "" {
-		originalURL = h.cfg.BaseURL
+		http.Error(w, "Empty request body", http.StatusBadRequest)
+		return
 	}
 	shortURL := h.store.AddURL(originalURL)
 

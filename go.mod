@@ -3,6 +3,7 @@ module github.com/TimBerk/go-link-shortener
 go 1.22
 
 require (
+	bou.ke/monkey v1.0.2
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/stretchr/testify v1.10.0
 )
