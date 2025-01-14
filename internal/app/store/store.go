@@ -2,6 +2,7 @@ package store
 
 import (
 	"math/rand"
+	"sync"
 )
 
 const (
@@ -19,6 +20,7 @@ type URLStore struct {
 	linksMap    map[string]string
 	originalMap map[string]string
 	gen         Generator
+	mutex       sync.Mutex
 }
 
 func NewIDGenerator() Generator {
@@ -48,6 +50,9 @@ type URLStoreInterface interface {
 }
 
 func (s *URLStore) AddURL(originalURL string) string {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if shortURL, exists := s.originalMap[originalURL]; exists {
 		return shortURL
 	}

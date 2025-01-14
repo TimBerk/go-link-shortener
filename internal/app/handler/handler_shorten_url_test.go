@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -84,5 +86,30 @@ func TestShortenURL(t *testing.T) {
 			assert.Equal(t, test.expectedResponse, recorder.Body.String(), "Неверное тело ответа для теста: %s", test.name)
 			mockStore.AssertExpectations(t)
 		})
+	}
+}
+
+func TestAddURL_Concurrent(t *testing.T) {
+	var wg sync.WaitGroup
+	var results []string
+	testGen := store.NewIDGenerator()
+	testStore := store.NewURLStore(testGen)
+	originalURL := "https://example.com"
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			results = append(results, testStore.AddURL(originalURL))
+		}()
+	}
+
+	wg.Wait()
+
+	firstResult := results[0]
+	for _, result := range results {
+		if result != firstResult {
+			t.Errorf("Expected all results to be %s, got %s", firstResult, result)
+		}
 	}
 }
