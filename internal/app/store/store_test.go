@@ -1,0 +1,125 @@
+package store
+
+import (
+	"testing"
+
+	"reflect"
+
+	"bou.ke/monkey"
+	"github.com/stretchr/testify/assert"
+)
+
+type MockGenerator struct{}
+
+func (m *MockGenerator) Next() string {
+	return "short2"
+}
+
+func TestAddURL(t *testing.T) {
+	tests := []struct {
+		name        string
+		store       *URLStore
+		originalURL string
+		want        string
+	}{
+		{
+			name:        "Add new value in empty Store",
+			store:       NewURLStore(NewIDGenerator()),
+			originalURL: "localhost:8080",
+			want:        "short2",
+		},
+		{
+			name: "Add new value in Store",
+			store: &URLStore{
+				linksMap:    map[string]string{"short1": "localhost:9090"},
+				originalMap: map[string]string{"localhost:9090": "short1"},
+				gen:         NewIDGenerator(),
+			},
+			originalURL: "localhost:8080",
+			want:        "short2",
+		},
+		{
+			name: "Add exist value in Store",
+			store: &URLStore{
+				linksMap:    map[string]string{"short2": "localhost:8080"},
+				originalMap: map[string]string{"localhost:8080": "short2"},
+				gen:         NewIDGenerator(),
+			},
+			originalURL: "localhost:8080",
+			want:        "short2",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mockGen := &IDGenerator{}
+			patch := monkey.PatchInstanceMethod(
+				reflect.TypeOf(mockGen),
+				"Next",
+				func(*IDGenerator) string {
+					return "short2"
+				},
+			)
+			defer patch.Unpatch()
+
+			assert.Equal(
+				t,
+				test.store.AddURL(test.originalURL),
+				test.want,
+				"stores.AddURL(%s) must return %t",
+				test.originalURL,
+				test.want,
+			)
+		})
+	}
+
+}
+
+func TestGetOriginalURL(t *testing.T) {
+	tests := []struct {
+		name        string
+		store       *URLStore
+		shortURL    string
+		originalURL string
+		exists      bool
+	}{
+		{
+			name:        "Get url from empty Store",
+			store:       NewURLStore(NewIDGenerator()),
+			shortURL:    "short1",
+			originalURL: "",
+			exists:      false,
+		},
+		{
+			name: "Get exist value in Store",
+			store: &URLStore{
+				linksMap:    map[string]string{"short1": "localhost:9090"},
+				originalMap: map[string]string{"localhost:9090": "short1"},
+				gen:         NewIDGenerator(),
+			},
+			shortURL:    "short1",
+			originalURL: "localhost:9090",
+			exists:      true,
+		},
+		{
+			name: "Get not exist value in Store",
+			store: &URLStore{
+				linksMap:    map[string]string{"short2": "localhost:8080"},
+				originalMap: map[string]string{"localhost:8080": "short2"},
+				gen:         NewIDGenerator(),
+			},
+			shortURL:    "short1",
+			originalURL: "",
+			exists:      false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			originalURL, exists := test.store.GetOriginalURL(test.shortURL)
+
+			assert.Equal(t, test.originalURL, originalURL, "Incorrect original URL for test: %s", test.name)
+			assert.Equal(t, test.exists, exists, "Incorrect flag exists for test: %s", test.name)
+		})
+	}
+}
