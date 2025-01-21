@@ -8,6 +8,7 @@ import (
 type Config struct {
 	ServerAddress string
 	BaseURL       string
+	LogLevel      string
 }
 
 func InitConfig() *Config {
@@ -15,9 +16,11 @@ func InitConfig() *Config {
 
 	envServerAddress := os.Getenv("SERVER_ADDRESS")
 	envBaseURL := os.Getenv("BASE_URL")
+	envLogLevel := os.Getenv("LOGGING_LEVEL")
 
 	flag.StringVar(&cfg.ServerAddress, "a", "localhost:8080", "HTTP server address")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
+	flag.StringVar(&cfg.LogLevel, "l", "info", "Logging level")
 
 	flag.Parse()
 
@@ -26,6 +29,9 @@ func InitConfig() *Config {
 	}
 	if envBaseURL != "" {
 		cfg.BaseURL = envBaseURL
+	}
+	if envLogLevel != "" {
+		cfg.LogLevel = envLogLevel
 	}
 
 	return cfg

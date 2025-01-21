@@ -1,17 +1,18 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/handler"
+	"github.com/TimBerk/go-link-shortener/internal/app/logger"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
 	cfg := config.InitConfig()
+	logger.Initialize(cfg.LogLevel)
 	generator := store.NewIDGenerator()
 	store := store.NewURLStore(generator)
 	handler := handler.NewHandler(store, cfg)
@@ -21,9 +22,9 @@ func main() {
 	router.Post("/", handler.ShortenURL)
 	router.Get("/{id}", handler.Redirect)
 
-	log.Printf("Starting server on %s ...\n", cfg.ServerAddress)
+	logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
 	err := http.ListenAndServe(cfg.ServerAddress, router)
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		logger.Log.Fatal("ListenAndServe: ", err)
 	}
 }
