@@ -5,7 +5,9 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/TimBerk/go-link-shortener/internal/app/models"
 	stores "github.com/TimBerk/go-link-shortener/internal/app/store"
+	"github.com/mailru/easyjson"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
@@ -45,6 +47,39 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(fullShortURL))
+}
+
+func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if !utils.CheckParamInHeaderParam(r, "Content-Type", "application/json") {
+		utils.WriteJSONError(w, "Invalid Content-Type", http.StatusBadRequest)
+		return
+	}
+
+	var jsonBody models.RequestJSON
+	if err := easyjson.UnmarshalFromReader(r.Body, &jsonBody); err != nil {
+		utils.WriteJSONError(w, "Failed to decode request body", http.StatusBadRequest)
+		return
+	}
+
+	if jsonBody.URL == "" {
+		utils.WriteJSONError(w, "Empty request body", http.StatusBadRequest)
+		return
+	}
+
+	shortURL := h.store.AddURL(jsonBody.URL)
+	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
+	responseJSON := models.ResponseJSON{Result: fullShortURL}
+
+	response, err := easyjson.Marshal(responseJSON)
+	if err != nil {
+		utils.WriteJSONError(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write(response)
 }
 
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {

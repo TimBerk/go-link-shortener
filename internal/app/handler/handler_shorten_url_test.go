@@ -10,22 +10,7 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-type MockURLStore struct {
-	mock.Mock
-}
-
-func (m *MockURLStore) AddURL(originalURL string) string {
-	args := m.Called(originalURL)
-	return args.String(0)
-}
-
-func (m *MockURLStore) GetOriginalURL(shortURL string) (string, bool) {
-	args := m.Called(shortURL)
-	return args.String(0), args.Bool(1)
-}
 
 func TestShortenURL(t *testing.T) {
 	mockConfig := config.NewConfig("localhost:8021", "http://base.loc")

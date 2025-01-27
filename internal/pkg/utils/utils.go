@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
@@ -26,4 +27,21 @@ func CheckParamInHeaderParam(r *http.Request, headerParam string, needParam stri
 
 	log.Printf("Header param (%s) has not param (%s).", headerParam, needParam)
 	return false
+}
+
+func WriteJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.WriteHeader(statusCode)
+	errorResponse := struct {
+		Error string `json:"error"`
+	}{
+		Error: message,
+	}
+
+	log.Println(w.Header())
+	log.Println(message)
+	log.Println(statusCode)
+
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	encoder.Encode(errorResponse)
 }
