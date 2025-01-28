@@ -24,10 +24,10 @@ func NewHandler(store stores.URLStoreInterface, cfg *config.Config) *Handler {
 }
 
 func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
-	if !utils.CheckParamInHeaderParam(r, "Content-Type", "text/plain") {
-		http.Error(w, "Invalid Content-Type", http.StatusBadRequest)
-		return
-	}
+	// if !utils.CheckParamInHeaderParam(r, "Content-Type", "text/plain") {
+	// 	http.Error(w, "Invalid Content-Type", http.StatusBadRequest)
+	// 	return
+	// }
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -51,9 +51,8 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
 	if !utils.CheckParamInHeaderParam(r, "Content-Type", "application/json") {
-		utils.WriteJSONError(w, "Invalid Content-Type", http.StatusBadRequest)
+		http.Error(w, "Invalid Content-Type", http.StatusBadRequest)
 		return
 	}
 

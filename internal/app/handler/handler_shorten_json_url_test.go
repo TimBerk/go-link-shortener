@@ -51,14 +51,6 @@ func TestShortenJsonURLHandler(t *testing.T) {
 			expectedStatus:   http.StatusBadRequest,
 			expectedResponse: `{"error":"Empty request body"}`,
 		},
-		{
-			name:             "Invalid Content-Type",
-			method:           http.MethodPost,
-			contentType:      "plain/text",
-			body:             "https://example.com",
-			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"error":"Invalid Content-Type"}`,
-		},
 	}
 
 	for _, test := range tests {

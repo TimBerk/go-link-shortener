@@ -5,7 +5,8 @@ import (
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/handler"
-	"github.com/TimBerk/go-link-shortener/internal/app/logger"
+	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/compress"
+	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/go-chi/chi/v5"
 )
@@ -18,6 +19,8 @@ func main() {
 	handler := handler.NewHandler(store, cfg)
 
 	router := chi.NewRouter()
+	router.Use(logger.RequestLogger)
+	router.Use(compress.GzipMiddleware)
 
 	router.Post("/api/shorten", handler.ShortenJSONURL)
 	router.Get("/{id}", handler.Redirect)

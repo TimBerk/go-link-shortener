@@ -43,7 +43,7 @@ func Initialize(level string) error {
 	return nil
 }
 
-func RequestLogger(h http.HandlerFunc) http.Handler {
+func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -53,7 +53,7 @@ func RequestLogger(h http.HandlerFunc) http.Handler {
 		}).Info("Incoming request")
 
 		rw := &responseLogger{w: w, status: http.StatusOK, size: 0}
-		h(rw, r)
+		next.ServeHTTP(rw, r)
 
 		logrus.WithFields(logrus.Fields{
 			"status":   rw.status,
