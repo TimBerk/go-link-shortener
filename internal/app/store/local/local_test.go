@@ -1,4 +1,4 @@
-package store
+package local
 
 import (
 	"testing"
@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"bou.ke/monkey"
+	base "github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +25,7 @@ func TestAddURL(t *testing.T) {
 	}{
 		{
 			name:        "Add new value in empty Store",
-			store:       NewURLStore(NewIDGenerator()),
+			store:       NewURLStore(base.NewIDGenerator()),
 			originalURL: "localhost:8080",
 			want:        "short2",
 		},
@@ -33,7 +34,7 @@ func TestAddURL(t *testing.T) {
 			store: &URLStore{
 				linksMap:    map[string]string{"short1": "localhost:9090"},
 				originalMap: map[string]string{"localhost:9090": "short1"},
-				gen:         NewIDGenerator(),
+				gen:         base.NewIDGenerator(),
 			},
 			originalURL: "localhost:8080",
 			want:        "short2",
@@ -43,7 +44,7 @@ func TestAddURL(t *testing.T) {
 			store: &URLStore{
 				linksMap:    map[string]string{"short2": "localhost:8080"},
 				originalMap: map[string]string{"localhost:8080": "short2"},
-				gen:         NewIDGenerator(),
+				gen:         base.NewIDGenerator(),
 			},
 			originalURL: "localhost:8080",
 			want:        "short2",
@@ -52,11 +53,11 @@ func TestAddURL(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mockGen := &IDGenerator{}
+			mockGen := &base.IDGenerator{}
 			patch := monkey.PatchInstanceMethod(
 				reflect.TypeOf(mockGen),
 				"Next",
-				func(*IDGenerator) string {
+				func(*base.IDGenerator) string {
 					return "short2"
 				},
 			)
@@ -85,7 +86,7 @@ func TestGetOriginalURL(t *testing.T) {
 	}{
 		{
 			name:        "Get url from empty Store",
-			store:       NewURLStore(NewIDGenerator()),
+			store:       NewURLStore(base.NewIDGenerator()),
 			shortURL:    "short1",
 			originalURL: "",
 			exists:      false,
@@ -95,7 +96,7 @@ func TestGetOriginalURL(t *testing.T) {
 			store: &URLStore{
 				linksMap:    map[string]string{"short1": "localhost:9090"},
 				originalMap: map[string]string{"localhost:9090": "short1"},
-				gen:         NewIDGenerator(),
+				gen:         base.NewIDGenerator(),
 			},
 			shortURL:    "short1",
 			originalURL: "localhost:9090",
@@ -106,7 +107,7 @@ func TestGetOriginalURL(t *testing.T) {
 			store: &URLStore{
 				linksMap:    map[string]string{"short2": "localhost:8080"},
 				originalMap: map[string]string{"localhost:8080": "short2"},
-				gen:         NewIDGenerator(),
+				gen:         base.NewIDGenerator(),
 			},
 			shortURL:    "short1",
 			originalURL: "",

@@ -6,9 +6,11 @@ import (
 )
 
 type Config struct {
-	ServerAddress string
-	BaseURL       string
-	LogLevel      string
+	ServerAddress   string
+	BaseURL         string
+	LogLevel        string
+	FileStoragePath string
+	UseLocalStore   bool `envconfig:"USE_LOCAL_STORE" default:"true"`
 }
 
 func InitConfig() *Config {
@@ -17,10 +19,12 @@ func InitConfig() *Config {
 	envServerAddress := os.Getenv("SERVER_ADDRESS")
 	envBaseURL := os.Getenv("BASE_URL")
 	envLogLevel := os.Getenv("LOGGING_LEVEL")
+	envFileStoragePath := os.Getenv("FILE_STORAGE_PATH")
 
 	flag.StringVar(&cfg.ServerAddress, "a", "localhost:8080", "HTTP server address")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
 	flag.StringVar(&cfg.LogLevel, "l", "info", "Logging level")
+	flag.StringVar(&cfg.FileStoragePath, "p", "files/data.json", "Path for files")
 
 	flag.Parse()
 
@@ -32,6 +36,9 @@ func InitConfig() *Config {
 	}
 	if envLogLevel != "" {
 		cfg.LogLevel = envLogLevel
+	}
+	if envFileStoragePath != "" {
+		cfg.FileStoragePath = envFileStoragePath
 	}
 
 	return cfg

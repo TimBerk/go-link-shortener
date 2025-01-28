@@ -28,3 +28,7 @@ vendor/
 
 # Makefile
 Makefile
+
+# Files
+files/*
+!files/.gitkeep

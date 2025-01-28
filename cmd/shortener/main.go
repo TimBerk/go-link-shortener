@@ -8,6 +8,8 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/compress"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
+	"github.com/TimBerk/go-link-shortener/internal/app/store/json"
+	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -15,8 +17,14 @@ func main() {
 	cfg := config.InitConfig()
 	logger.Initialize(cfg.LogLevel)
 	generator := store.NewIDGenerator()
-	store := store.NewURLStore(generator)
-	handler := handler.NewHandler(store, cfg)
+
+	var dataStore store.MainStoreInterface
+	if cfg.UseLocalStore {
+		dataStore = local.NewURLStore(generator)
+	} else {
+		dataStore = json.NewJSONStore(cfg.FileStoragePath, generator)
+	}
+	handler := handler.NewHandler(dataStore, cfg)
 
 	router := chi.NewRouter()
 	router.Use(logger.RequestLogger)

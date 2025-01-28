@@ -9,6 +9,7 @@ import (
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
+	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -70,7 +71,7 @@ func TestAddURL_Concurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	var results []string
 	testGen := store.NewIDGenerator()
-	testStore := store.NewURLStore(testGen)
+	testStore := local.NewURLStore(testGen)
 	originalURL := "https://example.com"
 
 	for i := 0; i < 10; i++ {
