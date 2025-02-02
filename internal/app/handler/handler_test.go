@@ -8,9 +8,9 @@ type MockURLStore struct {
 	mock.Mock
 }
 
-func (m *MockURLStore) AddURL(originalURL string) string {
+func (m *MockURLStore) AddURL(originalURL string) (string, error) {
 	args := m.Called(originalURL)
-	return args.String(0)
+	return args.String(0), nil
 }
 
 func (m *MockURLStore) GetOriginalURL(shortURL string) (string, bool) {

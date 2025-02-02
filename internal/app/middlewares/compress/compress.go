@@ -3,6 +3,7 @@ package compress
 import (
 	"compress/gzip"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -79,6 +80,7 @@ func GzipMiddleware(next http.Handler) http.Handler {
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
+				log.Printf("Header error for Content-Encoding: %s, %s", w.Header(), err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}

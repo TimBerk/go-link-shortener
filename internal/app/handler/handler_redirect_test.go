@@ -20,13 +20,13 @@ func (m *MockStore) GetOriginalURL(shortURL string) (string, bool) {
 	return m.originalURL, m.exists
 }
 
-func (m *MockStore) AddURL(url string) string {
+func (m *MockStore) AddURL(url string) (string, error) {
 	m.addedURL = url
-	return "abc123"
+	return "abc123", nil
 }
 
 func TestShortenURL_Success(t *testing.T) {
-	mockConfig := config.NewConfig("localhost:8021", "http://base.url")
+	mockConfig := config.NewConfig("localhost:8021", "http://base.url", true)
 	mockStore := &MockStore{}
 	handler := NewHandler(mockStore, mockConfig)
 	body := strings.NewReader("https://example.com")
@@ -42,7 +42,7 @@ func TestShortenURL_Success(t *testing.T) {
 }
 
 func TestRedirect_Success(t *testing.T) {
-	mockConfig := config.NewConfig("localhost:8021", "http://base:url")
+	mockConfig := config.NewConfig("localhost:8021", "http://base:url", true)
 	mockStore := &MockStore{
 		originalURL: "https://example.com",
 		exists:      true,

@@ -13,20 +13,20 @@ type URLStore struct {
 	mutex       sync.Mutex
 }
 
-func NewURLStore(gen store.Generator) *URLStore {
+func NewURLStore(gen store.Generator) (*URLStore, error) {
 	return &URLStore{
 		linksMap:    make(map[string]string),
 		originalMap: make(map[string]string),
 		gen:         gen,
-	}
+	}, nil
 }
 
-func (s *URLStore) AddURL(originalURL string) string {
+func (s *URLStore) AddURL(originalURL string) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if shortURL, exists := s.originalMap[originalURL]; exists {
-		return shortURL
+		return shortURL, nil
 	}
 
 	shortURL := s.gen.Next()
@@ -37,7 +37,7 @@ func (s *URLStore) AddURL(originalURL string) string {
 
 	s.linksMap[shortURL] = originalURL
 	s.originalMap[originalURL] = shortURL
-	return shortURL
+	return shortURL, nil
 }
 
 func (s *URLStore) GetOriginalURL(shortURL string) (string, bool) {

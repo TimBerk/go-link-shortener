@@ -29,6 +29,6 @@ func (g *IDGenerator) Next() string {
 }
 
 type MainStoreInterface interface {
-	AddURL(originalURL string) string
+	AddURL(originalURL string) (string, error)
 	GetOriginalURL(shortURL string) (string, bool)
 }

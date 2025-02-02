@@ -2,6 +2,7 @@ package json
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 
@@ -23,13 +24,20 @@ type JSONStore struct {
 	mutex       sync.Mutex
 }
 
-func NewJSONStore(filePath string, gen store.Generator) *JSONStore {
-	return &JSONStore{
+func NewJSONStore(filePath string, gen store.Generator) (*JSONStore, error) {
+	store := &JSONStore{
 		storage:     make(map[string]JSONRecord),
 		fullStorage: make(map[string]JSONRecord),
 		filePath:    filePath,
 		gen:         gen,
 	}
+
+	err := store.loadStorage()
+	if err != nil {
+		return nil, fmt.Errorf("error loading json store: %s", err)
+	}
+
+	return store, nil
 }
 
 func (s *JSONStore) loadStorage() error {
@@ -69,13 +77,12 @@ func (s *JSONStore) saveStorage() error {
 	return nil
 }
 
-func (s *JSONStore) AddURL(originalURL string) string {
+func (s *JSONStore) AddURL(originalURL string) (string, error) {
 	s.mutex.Lock()
-	s.loadStorage()
 	defer s.mutex.Unlock()
 
 	if record, exists := s.fullStorage[originalURL]; exists {
-		return record.ShortURL
+		return record.ShortURL, nil
 	}
 
 	shortURL := s.gen.Next()
@@ -92,8 +99,12 @@ func (s *JSONStore) AddURL(originalURL string) string {
 
 	s.storage[shortURL] = record
 	s.fullStorage[originalURL] = record
-	s.saveStorage()
-	return shortURL
+
+	err := s.saveStorage()
+	if err != nil {
+		return "", fmt.Errorf("error saving json store: %s", err)
+	}
+	return shortURL, nil
 }
 
 func (s *JSONStore) GetOriginalURL(shortURL string) (string, bool) {

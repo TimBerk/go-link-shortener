@@ -14,7 +14,7 @@ import (
 )
 
 func TestShortenURL(t *testing.T) {
-	mockConfig := config.NewConfig("localhost:8021", "http://base.loc")
+	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
 	mockStore := new(MockURLStore)
 	testHandler := NewHandler(mockStore, mockConfig)
 
@@ -71,14 +71,15 @@ func TestAddURL_Concurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	var results []string
 	testGen := store.NewIDGenerator()
-	testStore := local.NewURLStore(testGen)
+	testStore, _ := local.NewURLStore(testGen)
 	originalURL := "https://example.com"
 
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			results = append(results, testStore.AddURL(originalURL))
+			shortLink, _ := testStore.AddURL(originalURL)
+			results = append(results, shortLink)
 		}()
 	}
 

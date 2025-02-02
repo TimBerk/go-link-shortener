@@ -12,7 +12,7 @@ import (
 )
 
 func TestShortenJsonURLHandler(t *testing.T) {
-	mockConfig := config.NewConfig("localhost:8021", "http://base.loc")
+	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
 	mockStore := new(MockURLStore)
 	testHandler := NewHandler(mockStore, mockConfig)
 

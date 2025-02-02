@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+type JSONErrorResponse struct {
+	Error string `json:"error"`
+}
+
 func CheckParamInHeaderParam(r *http.Request, headerParam string, needParam string) bool {
 	headerValue := r.Header.Get(headerParam)
 	if headerValue == "" {
@@ -31,15 +35,11 @@ func CheckParamInHeaderParam(r *http.Request, headerParam string, needParam stri
 
 func WriteJSONError(w http.ResponseWriter, message string, statusCode int) {
 	w.WriteHeader(statusCode)
-	errorResponse := struct {
-		Error string `json:"error"`
-	}{
+	errorResponse := JSONErrorResponse{
 		Error: message,
 	}
 
-	log.Println(w.Header())
-	log.Println(message)
-	log.Println(statusCode)
+	log.Printf("JSONError - (%s): [(%s)] %d", w.Header(), message, statusCode)
 
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)

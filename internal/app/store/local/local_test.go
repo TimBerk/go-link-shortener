@@ -24,8 +24,12 @@ func TestAddURL(t *testing.T) {
 		want        string
 	}{
 		{
-			name:        "Add new value in empty Store",
-			store:       NewURLStore(base.NewIDGenerator()),
+			name: "Add new value in empty Store",
+			store: &URLStore{
+				linksMap:    map[string]string{},
+				originalMap: map[string]string{},
+				gen:         base.NewIDGenerator(),
+			},
 			originalURL: "localhost:8080",
 			want:        "short2",
 		},
@@ -63,9 +67,11 @@ func TestAddURL(t *testing.T) {
 			)
 			defer patch.Unpatch()
 
+			currentLink, _ := test.store.AddURL(test.originalURL)
+
 			assert.Equal(
 				t,
-				test.store.AddURL(test.originalURL),
+				currentLink,
 				test.want,
 				"stores.AddURL(%s) must return %t",
 				test.originalURL,
@@ -85,8 +91,12 @@ func TestGetOriginalURL(t *testing.T) {
 		exists      bool
 	}{
 		{
-			name:        "Get url from empty Store",
-			store:       NewURLStore(base.NewIDGenerator()),
+			name: "Get url from empty Store",
+			store: &URLStore{
+				linksMap:    map[string]string{},
+				originalMap: map[string]string{},
+				gen:         base.NewIDGenerator(),
+			},
 			shortURL:    "short1",
 			originalURL: "",
 			exists:      false,

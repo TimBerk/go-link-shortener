@@ -35,7 +35,12 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty request body", http.StatusBadRequest)
 		return
 	}
-	shortURL := h.store.AddURL(originalURL)
+
+	shortURL, err := h.store.AddURL(originalURL)
+	if err != nil {
+		http.Error(w, "Error getting url", http.StatusBadRequest)
+		return
+	}
 
 	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
 
@@ -62,7 +67,12 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL := h.store.AddURL(jsonBody.URL)
+	shortURL, err := h.store.AddURL(jsonBody.URL)
+	if err != nil {
+		utils.WriteJSONError(w, "Error getting url", http.StatusBadRequest)
+		return
+	}
+
 	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
 	responseJSON := models.ResponseJSON{Result: fullShortURL}
 

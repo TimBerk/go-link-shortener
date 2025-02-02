@@ -19,11 +19,17 @@ func main() {
 	generator := store.NewIDGenerator()
 
 	var dataStore store.MainStoreInterface
+	var errStore error
+
 	if cfg.UseLocalStore {
-		dataStore = local.NewURLStore(generator)
+		dataStore, errStore = local.NewURLStore(generator)
 	} else {
-		dataStore = json.NewJSONStore(cfg.FileStoragePath, generator)
+		dataStore, errStore = json.NewJSONStore(cfg.FileStoragePath, generator)
 	}
+	if errStore != nil {
+		logger.Log.Fatal("Read Store: ", errStore)
+	}
+
 	handler := handler.NewHandler(dataStore, cfg)
 
 	router := chi.NewRouter()
