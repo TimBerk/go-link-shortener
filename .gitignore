@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+*.gz
 
 # Test binary, built with `go test -c`
 *.test
@@ -27,3 +28,7 @@ vendor/
 
 # Makefile
 Makefile
+
+# Files
+files/*
+!files/.gitkeep

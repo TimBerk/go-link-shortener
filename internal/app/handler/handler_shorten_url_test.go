@@ -9,26 +9,12 @@ import (
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
+	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-type MockURLStore struct {
-	mock.Mock
-}
-
-func (m *MockURLStore) AddURL(originalURL string) string {
-	args := m.Called(originalURL)
-	return args.String(0)
-}
-
-func (m *MockURLStore) GetOriginalURL(shortURL string) (string, bool) {
-	args := m.Called(shortURL)
-	return args.String(0), args.Bool(1)
-}
-
 func TestShortenURL(t *testing.T) {
-	mockConfig := config.NewConfig("localhost:8021", "http://base.loc")
+	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
 	mockStore := new(MockURLStore)
 	testHandler := NewHandler(mockStore, mockConfig)
 
@@ -56,14 +42,6 @@ func TestShortenURL(t *testing.T) {
 			contentType:      "text/plain",
 			expectedStatus:   http.StatusBadRequest,
 			expectedResponse: "Empty request body\n",
-		},
-		{
-			name:             "Invalid Content-Type",
-			method:           http.MethodPost,
-			contentType:      "application/json",
-			body:             "https://example.com",
-			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: "Invalid Content-Type\n",
 		},
 	}
 
@@ -93,14 +71,15 @@ func TestAddURL_Concurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	var results []string
 	testGen := store.NewIDGenerator()
-	testStore := store.NewURLStore(testGen)
+	testStore, _ := local.NewURLStore(testGen)
 	originalURL := "https://example.com"
 
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			results = append(results, testStore.AddURL(originalURL))
+			shortLink, _ := testStore.AddURL(originalURL)
+			results = append(results, shortLink)
 		}()
 	}
 
