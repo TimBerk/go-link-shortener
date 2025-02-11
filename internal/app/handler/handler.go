@@ -1,12 +1,17 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/models"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
+	"github.com/TimBerk/go-link-shortener/internal/app/store/pg"
 	"github.com/mailru/easyjson"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
@@ -96,4 +101,24 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Location", originalURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 200*time.Second)
+	defer cancel()
+
+	pgService, err := pg.NewPG(ctx, h.cfg.DatabaseDSN)
+	if err != nil {
+		logrus.WithField("err", err).Error("Connect to DB")
+		http.Error(w, "error to create connection to DB", http.StatusInternalServerError)
+		return
+	}
+
+	if pgService.Ping(ctx) != nil {
+		logrus.WithField("err", err).Error("Check connection to DB")
+		http.Error(w, "error to check connection to DB", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

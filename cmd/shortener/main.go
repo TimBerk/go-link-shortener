@@ -36,6 +36,7 @@ func main() {
 	router.Use(logger.RequestLogger)
 	router.Use(compress.GzipMiddleware)
 
+	router.Get("/ping", handler.Ping)
 	router.Post("/api/shorten", handler.ShortenJSONURL)
 	router.Get("/{id}", handler.Redirect)
 	router.Post("/", handler.ShortenURL)
