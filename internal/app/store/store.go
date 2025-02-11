@@ -2,6 +2,8 @@ package store
 
 import (
 	"math/rand"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 )
 
 const (
@@ -30,5 +32,6 @@ func (g *IDGenerator) Next() string {
 
 type MainStoreInterface interface {
 	AddURL(originalURL string) (string, error)
+	AddURLs(urls batch.BatchRequest) (batch.BatchResponse, error)
 	GetOriginalURL(shortURL string) (string, bool)
 }

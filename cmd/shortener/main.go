@@ -23,7 +23,7 @@ func main() {
 	var errStore error
 
 	if cfg.DatabaseDSN != "" {
-		dataStore, errStore = pg.NewPgStore(cfg.DatabaseDSN, generator)
+		dataStore, errStore = pg.NewPgStore(generator, cfg)
 	} else if cfg.UseLocalStore {
 		dataStore, errStore = local.NewURLStore(generator)
 	} else {
@@ -40,6 +40,7 @@ func main() {
 	router.Use(compress.GzipMiddleware)
 
 	router.Get("/ping", handler.Ping)
+	router.Post("/api/shorten/batch", handler.ShortenBatch)
 	router.Post("/api/shorten", handler.ShortenJSONURL)
 	router.Get("/{id}", handler.Redirect)
 	router.Post("/", handler.ShortenURL)

@@ -6,8 +6,10 @@ import (
 	"os"
 	"sync"
 
+	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type JSONRecord struct {
@@ -102,9 +104,42 @@ func (s *JSONStore) AddURL(originalURL string) (string, error) {
 
 	err := s.saveStorage()
 	if err != nil {
-		return "", fmt.Errorf("error saving json store: %s", err)
+		logrus.WithField("err", err).Error("Error saving json store")
+		return "", err
 	}
 	return shortURL, nil
+}
+
+func (s *JSONStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, error) {
+	var responses models.BatchResponse
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	for _, req := range urls {
+		shortURL := s.gen.Next()
+
+		record := JSONRecord{
+			ShortURL:    shortURL,
+			OriginalURL: req.OriginalURL,
+			UUID:        req.CorrelationID,
+		}
+
+		s.storage[shortURL] = record
+		s.fullStorage[req.OriginalURL] = record
+
+		err := s.saveStorage()
+		if err != nil {
+			logrus.WithField("err", err).Error("Error saving json store")
+		} else {
+			responses = append(responses, models.ItemResponse{
+				CorrelationID: req.CorrelationID,
+				ShortURL:      shortURL,
+			})
+		}
+	}
+
+	return responses, nil
 }
 
 func (s *JSONStore) GetOriginalURL(shortURL string) (string, bool) {

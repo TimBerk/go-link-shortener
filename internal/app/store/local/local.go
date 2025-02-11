@@ -3,6 +3,7 @@ package local
 import (
 	"sync"
 
+	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
@@ -38,6 +39,27 @@ func (s *URLStore) AddURL(originalURL string) (string, error) {
 	s.linksMap[shortURL] = originalURL
 	s.originalMap[originalURL] = shortURL
 	return shortURL, nil
+}
+
+func (s *URLStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, error) {
+	var responses models.BatchResponse
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	for _, req := range urls {
+		shortURL := s.gen.Next()
+
+		s.linksMap[shortURL] = req.OriginalURL
+		s.originalMap[req.OriginalURL] = shortURL
+
+		responses = append(responses, models.ItemResponse{
+			CorrelationID: req.CorrelationID,
+			ShortURL:      shortURL,
+		})
+	}
+
+	return responses, nil
 }
 
 func (s *URLStore) GetOriginalURL(shortURL string) (string, bool) {

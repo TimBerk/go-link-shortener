@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,10 +15,19 @@ type MockStore struct {
 	originalURL string
 	exists      bool
 	addedURL    string
+	addedURLs   batch.BatchRequest
 }
 
 func (m *MockStore) GetOriginalURL(shortURL string) (string, bool) {
 	return m.originalURL, m.exists
+}
+
+func (m *MockStore) AddURLs(urls batch.BatchRequest) (batch.BatchResponse, error) {
+	m.addedURLs = urls
+
+	responses := make(batch.BatchResponse, 1)
+	responses[0] = batch.ItemResponse{CorrelationID: "test_1", ShortURL: "abc123"}
+	return responses, nil
 }
 
 func (m *MockStore) AddURL(url string) (string, error) {

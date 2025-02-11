@@ -9,7 +9,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/TimBerk/go-link-shortener/internal/app/models"
+	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
+	"github.com/TimBerk/go-link-shortener/internal/app/models/simple"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/pg"
 	"github.com/mailru/easyjson"
@@ -61,7 +62,7 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var jsonBody models.RequestJSON
+	var jsonBody simple.RequestJSON
 	if err := easyjson.UnmarshalFromReader(r.Body, &jsonBody); err != nil {
 		utils.WriteJSONError(w, "Failed to decode request body", http.StatusBadRequest)
 		return
@@ -79,7 +80,7 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
-	responseJSON := models.ResponseJSON{Result: fullShortURL}
+	responseJSON := simple.ResponseJSON{Result: fullShortURL}
 
 	response, err := easyjson.Marshal(responseJSON)
 	if err != nil {
@@ -95,6 +96,10 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
 	originalURL, exists := h.store.GetOriginalURL(shortURL)
 	if !exists {
+		logrus.WithFields(logrus.Fields{
+			"uri":      originalURL,
+			"shortUri": shortURL,
+		}).Error("Short URL not found")
 		http.Error(w, "Short URL not found", http.StatusNotFound)
 		return
 	}
@@ -121,4 +126,38 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
+	var batchRequests batch.BatchRequest
+
+	if err := easyjson.UnmarshalFromReader(r.Body, &batchRequests); err != nil {
+		logrus.WithField("err", err).Error("Invalid request body")
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if len(batchRequests) == 0 {
+		http.Error(w, "Empty batch", http.StatusBadRequest)
+		return
+	}
+
+	batchResponses, err := h.store.AddURLs(batchRequests)
+	if err != nil {
+		logrus.WithField("err", err).Error("Error shortening URLs")
+		http.Error(w, fmt.Sprintf("Error shortening URLs: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	response, err := easyjson.Marshal(batchResponses)
+	if err != nil {
+		logrus.WithField("err", err).Error("Error encoding response")
+		utils.WriteJSONError(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(response)
 }

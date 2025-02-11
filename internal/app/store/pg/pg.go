@@ -2,8 +2,11 @@ package pg
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
+	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,6 +16,7 @@ import (
 type PostgresStore struct {
 	db  *pgxpool.Pool
 	gen store.Generator
+	cfg *config.Config
 }
 
 type PgRecord struct {
@@ -46,15 +50,16 @@ func NewPgPool(ctx context.Context, connString string) (*PostgresStore, error) {
 	return pgInstance, nil
 }
 
-func NewPgStore(connString string, gen store.Generator) (*PostgresStore, error) {
+func NewPgStore(gen store.Generator, cfg *config.Config) (*PostgresStore, error) {
 	ctx := context.Background()
 
-	pgStore, err := NewPgPool(ctx, connString)
+	pgStore, err := NewPgPool(ctx, cfg.DatabaseDSN)
 	if err != nil {
 		return pgStore, err
 	}
 
 	pgStore.gen = gen
+	pgStore.cfg = cfg
 	pgStore.createTable(ctx)
 
 	return pgStore, nil
@@ -138,13 +143,58 @@ func (pg *PostgresStore) AddURL(originalURL string) (string, error) {
 	return shortURL, nil
 }
 
+func (pg *PostgresStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, error) {
+	var responses models.BatchResponse
+
+	tx, err := pg.db.Begin(context.Background())
+	if err != nil {
+		logrus.WithField("err", err).Error("Error starting transaction")
+		return nil, err
+	}
+	defer tx.Rollback(context.Background())
+
+	//`INSERT INTO short_urls (ID, original_url, short_url) VALUES ($1, $2, $3)
+	// ON CONFLICT (ID) DO UPDATE SET original_url=excluded.original_url, short_url=excluded.short_url`
+	query := `INSERT INTO short_urls (ID, original_url, short_url) VALUES ($1, $2, $3) ON CONFLICT (ID) DO NOTHING`
+	for _, req := range urls {
+		logrus.WithField("uri", req.OriginalURL).Info("Work with url")
+		shortURL := pg.gen.Next()
+
+		_, err := tx.Exec(context.Background(), query, req.CorrelationID, req.OriginalURL, shortURL)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"err":      err,
+				"ID":       req.CorrelationID,
+				"uri":      req.OriginalURL,
+				"shortUri": shortURL,
+			}).Error("Error inserting URL")
+		} else {
+			responses = append(responses, models.ItemResponse{
+				CorrelationID: req.CorrelationID,
+				ShortURL:      fmt.Sprintf("http://%s/%s", pg.cfg.ServerAddress, shortURL),
+			})
+		}
+	}
+
+	if err := tx.Commit(context.Background()); err != nil {
+		logrus.WithField("err", err).Error("Error committing transaction")
+		return nil, err
+	}
+
+	return responses, nil
+}
+
 func (pg *PostgresStore) GetOriginalURL(shortURL string) (string, bool) {
 	ctx := context.Background()
 
 	record, err := pg.getRecordByShortURL(ctx, shortURL)
 	if err == nil {
-		logrus.Error(err)
 		return record.OriginalURL, true
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"uri": shortURL,
+		"err": err,
+	}).Error("Short URL not found")
 	return "", false
 }
