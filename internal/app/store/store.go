@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"math/rand"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
@@ -10,6 +11,8 @@ const (
 	chars  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 	length = 6
 )
+
+var ErrLinkExist = errors.New("short link exist for original url")
 
 type IDGenerator struct{}
 

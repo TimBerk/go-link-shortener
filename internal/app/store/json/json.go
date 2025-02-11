@@ -84,7 +84,7 @@ func (s *JSONStore) AddURL(originalURL string) (string, error) {
 	defer s.mutex.Unlock()
 
 	if record, exists := s.fullStorage[originalURL]; exists {
-		return record.ShortURL, nil
+		return record.ShortURL, store.ErrLinkExist
 	}
 
 	shortURL := s.gen.Next()

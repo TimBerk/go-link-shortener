@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -43,14 +44,19 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortURL, err := h.store.AddURL(originalURL)
-	if err != nil {
+	existLink := errors.Is(err, store.ErrLinkExist)
+	if err != nil && !existLink {
 		http.Error(w, "Error getting url", http.StatusBadRequest)
 		return
 	}
 
 	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
 
-	w.WriteHeader(http.StatusCreated)
+	if !existLink {
+		w.WriteHeader(http.StatusCreated)
+	} else {
+		w.WriteHeader(http.StatusConflict)
+	}
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(fullShortURL))
 }
@@ -74,7 +80,8 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortURL, err := h.store.AddURL(jsonBody.URL)
-	if err != nil {
+	existLink := errors.Is(err, store.ErrLinkExist)
+	if err != nil && !existLink {
 		utils.WriteJSONError(w, "Error getting url", http.StatusBadRequest)
 		return
 	}
@@ -88,7 +95,11 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	if !existLink {
+		w.WriteHeader(http.StatusCreated)
+	} else {
+		w.WriteHeader(http.StatusConflict)
+	}
 	w.Write(response)
 }
 

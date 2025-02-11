@@ -77,7 +77,7 @@ func (pg *PostgresStore) createTable(ctx context.Context) error {
 	query := `
     CREATE TABLE IF NOT EXISTS short_urls (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        original_url TEXT NOT NULL,
+        original_url TEXT NOT NULL UNIQUE,
         short_url VARCHAR(6) NOT NULL UNIQUE
     );`
 	_, err := pg.db.Exec(ctx, query)
@@ -109,7 +109,7 @@ func (pg *PostgresStore) AddURL(originalURL string) (string, error) {
 
 	record, err := pg.getRecordByOriginalURL(ctx, originalURL)
 	if err == nil && record.OriginalURL != "" && record.ShortURL != "" {
-		return record.ShortURL, nil
+		return record.ShortURL, store.ErrLinkExist
 	} else if err != pgx.ErrNoRows {
 		logrus.WithFields(logrus.Fields{
 			"err": err,

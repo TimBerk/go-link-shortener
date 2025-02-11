@@ -27,7 +27,7 @@ func (s *URLStore) AddURL(originalURL string) (string, error) {
 	defer s.mutex.Unlock()
 
 	if shortURL, exists := s.originalMap[originalURL]; exists {
-		return shortURL, nil
+		return shortURL, store.ErrLinkExist
 	}
 
 	shortURL := s.gen.Next()
