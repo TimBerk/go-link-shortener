@@ -107,7 +107,7 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 200*time.Second)
 	defer cancel()
 
-	pgService, err := pg.NewPG(ctx, h.cfg.DatabaseDSN)
+	pgService, err := pg.NewPgPool(ctx, h.cfg.DatabaseDSN)
 	if err != nil {
 		logrus.WithField("err", err).Error("Connect to DB")
 		http.Error(w, "error to create connection to DB", http.StatusInternalServerError)

@@ -10,6 +10,7 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/json"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
+	"github.com/TimBerk/go-link-shortener/internal/app/store/pg"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -21,7 +22,9 @@ func main() {
 	var dataStore store.MainStoreInterface
 	var errStore error
 
-	if cfg.UseLocalStore {
+	if cfg.DatabaseDSN != "" {
+		dataStore, errStore = pg.NewPgStore(cfg.DatabaseDSN, generator)
+	} else if cfg.UseLocalStore {
 		dataStore, errStore = local.NewURLStore(generator)
 	} else {
 		dataStore, errStore = json.NewJSONStore(cfg.FileStoragePath, generator)
