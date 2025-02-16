@@ -1,6 +1,7 @@
 package json
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -145,4 +146,8 @@ func (s *JSONStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, err
 func (s *JSONStore) GetOriginalURL(shortURL string) (string, bool) {
 	record, exists := s.storage[shortURL]
 	return record.OriginalURL, exists
+}
+
+func (s *JSONStore) Ping(ctx context.Context) error {
+	return nil
 }

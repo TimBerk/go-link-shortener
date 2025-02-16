@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -33,6 +34,10 @@ func (m *MockStore) AddURLs(urls batch.BatchRequest) (batch.BatchResponse, error
 func (m *MockStore) AddURL(url string) (string, error) {
 	m.addedURL = url
 	return "abc123", nil
+}
+
+func (m *MockStore) Ping(ctx context.Context) error {
+	return nil
 }
 
 func TestShortenURL_Success(t *testing.T) {

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/stretchr/testify/mock"
 )
@@ -29,4 +31,8 @@ func (m *MockURLStore) AddURLs(urls batch.BatchRequest) (batch.BatchResponse, er
 func (m *MockURLStore) GetOriginalURL(shortURL string) (string, bool) {
 	args := m.Called(shortURL)
 	return args.String(0), args.Bool(1)
+}
+
+func (m *MockURLStore) Ping(ctx context.Context) error {
+	return nil
 }

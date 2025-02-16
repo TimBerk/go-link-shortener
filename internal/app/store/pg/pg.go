@@ -66,7 +66,18 @@ func NewPgStore(gen store.Generator, cfg *config.Config) (*PostgresStore, error)
 }
 
 func (pg *PostgresStore) Ping(ctx context.Context) error {
-	return pg.db.Ping(ctx)
+	connection, err := pgx.Connect(ctx, pg.cfg.DatabaseDSN)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Error("unable to create connection")
+		return err
+	}
+	defer connection.Close(ctx)
+
+	err = connection.Ping(ctx)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"err": err}).Error("failed to ping database")
+	}
+	return err
 }
 
 func (pg *PostgresStore) Close() {
@@ -108,7 +119,7 @@ func (pg *PostgresStore) AddURL(originalURL string) (string, error) {
 	ctx := context.Background()
 
 	record, err := pg.getRecordByOriginalURL(ctx, originalURL)
-	if err == nil && record.OriginalURL != "" && record.ShortURL != "" {
+	if err == nil && len(record.OriginalURL) > 0 && len(record.OriginalURL) > 0 {
 		return record.ShortURL, store.ErrLinkExist
 	} else if err != pgx.ErrNoRows {
 		logrus.WithFields(logrus.Fields{
@@ -118,17 +129,20 @@ func (pg *PostgresStore) AddURL(originalURL string) (string, error) {
 		return "", err
 	}
 
-	shortURL := pg.gen.Next()
-
-	record, err = pg.getRecordByShortURL(ctx, shortURL)
-	if err == nil && record.OriginalURL != "" && record.ShortURL != "" {
-		return pg.AddURL(originalURL)
-	} else if err != pgx.ErrNoRows {
-		logrus.WithFields(logrus.Fields{
-			"err": err,
-			"uri": shortURL,
-		}).Error("Error checking existing short URL")
-		return "", err
+	var shortURL string
+	for {
+		shortURL = pg.gen.Next()
+		record, err := pg.getRecordByShortURL(ctx, shortURL)
+		if err != pgx.ErrNoRows {
+			logrus.WithFields(logrus.Fields{
+				"err": err,
+				"uri": shortURL,
+			}).Error("failed to check existing short URL")
+			return "", err
+		}
+		if len(record.OriginalURL) == 0 {
+			break
+		}
 	}
 
 	if err := pg.insertRecord(ctx, originalURL, shortURL); err != nil {
@@ -153,14 +167,17 @@ func (pg *PostgresStore) AddURLs(urls models.BatchRequest) (models.BatchResponse
 	}
 	defer tx.Rollback(context.Background())
 
-	//`INSERT INTO short_urls (ID, original_url, short_url) VALUES ($1, $2, $3)
-	// ON CONFLICT (ID) DO UPDATE SET original_url=excluded.original_url, short_url=excluded.short_url`
 	query := `INSERT INTO short_urls (ID, original_url, short_url) VALUES ($1, $2, $3) ON CONFLICT (ID) DO NOTHING`
+	stmt, err := tx.Prepare(context.Background(), "insert-tx-stmt", query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+
 	for _, req := range urls {
 		logrus.WithField("uri", req.OriginalURL).Info("Work with url")
 		shortURL := pg.gen.Next()
 
-		_, err := tx.Exec(context.Background(), query, req.CorrelationID, req.OriginalURL, shortURL)
+		_, err := tx.Exec(context.Background(), stmt.SQL, req.CorrelationID, req.OriginalURL, shortURL)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"err":      err,

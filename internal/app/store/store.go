@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 
@@ -33,8 +34,9 @@ func (g *IDGenerator) Next() string {
 	return string(id)
 }
 
-type MainStoreInterface interface {
+type StoreInterface interface {
 	AddURL(originalURL string) (string, error)
 	AddURLs(urls batch.BatchRequest) (batch.BatchResponse, error)
 	GetOriginalURL(shortURL string) (string, bool)
+	Ping(ctx context.Context) error
 }

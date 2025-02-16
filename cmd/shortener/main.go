@@ -4,14 +4,12 @@ import (
 	"net/http"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
-	"github.com/TimBerk/go-link-shortener/internal/app/handler"
-	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/compress"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
+	"github.com/TimBerk/go-link-shortener/internal/app/router"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/json"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/pg"
-	"github.com/go-chi/chi/v5"
 )
 
 func main() {
@@ -19,7 +17,7 @@ func main() {
 	logger.Initialize(cfg.LogLevel)
 	generator := store.NewIDGenerator()
 
-	var dataStore store.MainStoreInterface
+	var dataStore store.StoreInterface
 	var errStore error
 
 	if cfg.DatabaseDSN != "" {
@@ -33,18 +31,7 @@ func main() {
 		logger.Log.Fatal("Read Store: ", errStore)
 	}
 
-	handler := handler.NewHandler(dataStore, cfg)
-
-	router := chi.NewRouter()
-	router.Use(logger.RequestLogger)
-	router.Use(compress.GzipMiddleware)
-
-	router.Get("/ping", handler.Ping)
-	router.Post("/api/shorten/batch", handler.ShortenBatch)
-	router.Post("/api/shorten", handler.ShortenJSONURL)
-	router.Get("/{id}", handler.Redirect)
-	router.Post("/", handler.ShortenURL)
-
+	router := router.RegisterRouters(dataStore, cfg)
 	logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
 	err := http.ListenAndServe(cfg.ServerAddress, router)
 	if err != nil {

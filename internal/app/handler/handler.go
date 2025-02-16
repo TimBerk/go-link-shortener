@@ -13,7 +13,6 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/TimBerk/go-link-shortener/internal/app/models/simple"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/TimBerk/go-link-shortener/internal/app/store/pg"
 	"github.com/mailru/easyjson"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
@@ -22,11 +21,11 @@ import (
 )
 
 type Handler struct {
-	store store.MainStoreInterface
+	store store.StoreInterface
 	cfg   *config.Config
 }
 
-func NewHandler(store store.MainStoreInterface, cfg *config.Config) *Handler {
+func NewHandler(store store.StoreInterface, cfg *config.Config) *Handler {
 	return &Handler{store: store, cfg: cfg}
 }
 
@@ -120,19 +119,13 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 200*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	pgService, err := pg.NewPgPool(ctx, h.cfg.DatabaseDSN)
+	err := h.store.Ping(ctx)
 	if err != nil {
-		logrus.WithField("err", err).Error("Connect to DB")
-		http.Error(w, "error to create connection to DB", http.StatusInternalServerError)
-		return
-	}
-
-	if pgService.Ping(ctx) != nil {
 		logrus.WithField("err", err).Error("Check connection to DB")
-		http.Error(w, "error to check connection to DB", http.StatusInternalServerError)
+		http.Error(w, "failed to check connection to DB", http.StatusInternalServerError)
 		return
 	}
 

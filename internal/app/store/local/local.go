@@ -1,6 +1,7 @@
 package local
 
 import (
+	"context"
 	"sync"
 
 	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
@@ -48,7 +49,14 @@ func (s *URLStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, erro
 	defer s.mutex.Unlock()
 
 	for _, req := range urls {
-		shortURL := s.gen.Next()
+		var shortURL string
+
+		for {
+			shortURL = s.gen.Next()
+			if _, exists := s.linksMap[shortURL]; !exists {
+				break
+			}
+		}
 
 		s.linksMap[shortURL] = req.OriginalURL
 		s.originalMap[req.OriginalURL] = shortURL
@@ -65,4 +73,8 @@ func (s *URLStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, erro
 func (s *URLStore) GetOriginalURL(shortURL string) (string, bool) {
 	originalURL, exists := s.linksMap[shortURL]
 	return originalURL, exists
+}
+
+func (s *URLStore) Ping(ctx context.Context) error {
+	return nil
 }
