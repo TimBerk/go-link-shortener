@@ -1,6 +1,7 @@
 package local
 
 import (
+	"context"
 	"testing"
 
 	"reflect"
@@ -17,6 +18,8 @@ func (m *MockGenerator) Next() string {
 }
 
 func TestAddURL(t *testing.T) {
+	ctx := context.Background()
+
 	tests := []struct {
 		name        string
 		store       *URLStore
@@ -67,7 +70,7 @@ func TestAddURL(t *testing.T) {
 			)
 			defer patch.Unpatch()
 
-			currentLink, _ := test.store.AddURL(test.originalURL)
+			currentLink, _ := test.store.AddURL(ctx, test.originalURL)
 
 			assert.Equal(
 				t,
@@ -83,6 +86,8 @@ func TestAddURL(t *testing.T) {
 }
 
 func TestGetOriginalURL(t *testing.T) {
+	ctx := context.Background()
+
 	tests := []struct {
 		name        string
 		store       *URLStore
@@ -127,7 +132,7 @@ func TestGetOriginalURL(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			originalURL, exists := test.store.GetOriginalURL(test.shortURL)
+			originalURL, exists := test.store.GetOriginalURL(ctx, test.shortURL)
 
 			assert.Equal(t, test.originalURL, originalURL, "Incorrect original URL for test: %s", test.name)
 			assert.Equal(t, test.exists, exists, "Incorrect flag exists for test: %s", test.name)

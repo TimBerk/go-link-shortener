@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
@@ -13,11 +14,12 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	cfg := config.InitConfig()
 	logger.Initialize(cfg.LogLevel)
 	generator := store.NewIDGenerator()
 
-	var dataStore store.StoreInterface
+	var dataStore store.Store
 	var errStore error
 
 	if cfg.DatabaseDSN != "" {
@@ -31,7 +33,7 @@ func main() {
 		logger.Log.Fatal("Read Store: ", errStore)
 	}
 
-	router := router.RegisterRouters(dataStore, cfg)
+	router := router.RegisterRouters(dataStore, cfg, ctx)
 	logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
 	err := http.ListenAndServe(cfg.ServerAddress, router)
 	if err != nil {

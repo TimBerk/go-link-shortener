@@ -34,9 +34,9 @@ func (g *IDGenerator) Next() string {
 	return string(id)
 }
 
-type StoreInterface interface {
-	AddURL(originalURL string) (string, error)
-	AddURLs(urls batch.BatchRequest) (batch.BatchResponse, error)
-	GetOriginalURL(shortURL string) (string, bool)
+type Store interface {
+	AddURL(ctx context.Context, originalURL string) (string, error)
+	AddURLs(ctx context.Context, urls batch.BatchRequest) (batch.BatchResponse, error)
+	GetOriginalURL(ctx context.Context, shortURL string) (string, bool)
 	Ping(ctx context.Context) error
 }

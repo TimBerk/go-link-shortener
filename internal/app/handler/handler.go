@@ -21,12 +21,13 @@ import (
 )
 
 type Handler struct {
-	store store.StoreInterface
+	store store.Store
 	cfg   *config.Config
+	ctx   context.Context
 }
 
-func NewHandler(store store.StoreInterface, cfg *config.Config) *Handler {
-	return &Handler{store: store, cfg: cfg}
+func NewHandler(store store.Store, cfg *config.Config, ctx context.Context) *Handler {
+	return &Handler{store: store, cfg: cfg, ctx: ctx}
 }
 
 func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +43,7 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := h.store.AddURL(originalURL)
+	shortURL, err := h.store.AddURL(h.ctx, originalURL)
 	existLink := errors.Is(err, store.ErrLinkExist)
 	if err != nil && !existLink {
 		http.Error(w, "Error getting url", http.StatusBadRequest)
@@ -78,7 +79,7 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := h.store.AddURL(jsonBody.URL)
+	shortURL, err := h.store.AddURL(h.ctx, jsonBody.URL)
 	existLink := errors.Is(err, store.ErrLinkExist)
 	if err != nil && !existLink {
 		utils.WriteJSONError(w, "Error getting url", http.StatusBadRequest)
@@ -104,7 +105,7 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
-	originalURL, exists := h.store.GetOriginalURL(shortURL)
+	originalURL, exists := h.store.GetOriginalURL(h.ctx, shortURL)
 	if !exists {
 		logrus.WithFields(logrus.Fields{
 			"uri":      originalURL,
@@ -147,7 +148,7 @@ func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	batchResponses, err := h.store.AddURLs(batchRequests)
+	batchResponses, err := h.store.AddURLs(h.ctx, batchRequests)
 	if err != nil {
 		logrus.WithField("err", err).Error("Error shortening URLs")
 		http.Error(w, fmt.Sprintf("Error shortening URLs: %v", err), http.StatusInternalServerError)

@@ -23,7 +23,7 @@ func NewURLStore(gen store.Generator) (*URLStore, error) {
 	}, nil
 }
 
-func (s *URLStore) AddURL(originalURL string) (string, error) {
+func (s *URLStore) AddURL(ctx context.Context, originalURL string) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -34,7 +34,7 @@ func (s *URLStore) AddURL(originalURL string) (string, error) {
 	shortURL := s.gen.Next()
 
 	if _, exists := s.linksMap[shortURL]; exists {
-		return s.AddURL(originalURL)
+		return s.AddURL(ctx, originalURL)
 	}
 
 	s.linksMap[shortURL] = originalURL
@@ -42,7 +42,7 @@ func (s *URLStore) AddURL(originalURL string) (string, error) {
 	return shortURL, nil
 }
 
-func (s *URLStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, error) {
+func (s *URLStore) AddURLs(ctx context.Context, urls models.BatchRequest) (models.BatchResponse, error) {
 	var responses models.BatchResponse
 
 	s.mutex.Lock()
@@ -70,7 +70,7 @@ func (s *URLStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, erro
 	return responses, nil
 }
 
-func (s *URLStore) GetOriginalURL(shortURL string) (string, bool) {
+func (s *URLStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
 	originalURL, exists := s.linksMap[shortURL]
 	return originalURL, exists
 }

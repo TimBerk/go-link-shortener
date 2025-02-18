@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,9 +13,10 @@ import (
 )
 
 func TestShortenJsonURLHandler(t *testing.T) {
+	ctx := context.Background()
 	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
 	mockStore := new(MockURLStore)
-	testHandler := NewHandler(mockStore, mockConfig)
+	testHandler := NewHandler(mockStore, mockConfig, ctx)
 
 	tests := []struct {
 		name               string

@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/handler"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/compress"
@@ -9,8 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func RegisterRouters(dataStore store.StoreInterface, cfg *config.Config) chi.Router {
-	handler := handler.NewHandler(dataStore, cfg)
+func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Context) chi.Router {
+	handler := handler.NewHandler(dataStore, cfg, ctx)
 
 	router := chi.NewRouter()
 	router.Use(logger.RequestLogger)

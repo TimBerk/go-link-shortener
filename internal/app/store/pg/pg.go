@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -115,13 +116,17 @@ func (pg *PostgresStore) insertRecord(ctx context.Context, originalURL, shortURL
 	return err
 }
 
-func (pg *PostgresStore) AddURL(originalURL string) (string, error) {
-	ctx := context.Background()
-
+func (pg *PostgresStore) AddURL(ctx context.Context, originalURL string) (string, error) {
 	record, err := pg.getRecordByOriginalURL(ctx, originalURL)
-	if err == nil && len(record.OriginalURL) > 0 && len(record.OriginalURL) > 0 {
+	logrus.WithFields(logrus.Fields{
+		"originalURL": originalURL,
+		"record":      record,
+		"err":         err,
+	}).Info("Attempt check short URL link")
+
+	if err == nil {
 		return record.ShortURL, store.ErrLinkExist
-	} else if err != pgx.ErrNoRows {
+	} else if !errors.Is(err, pgx.ErrNoRows) {
 		logrus.WithFields(logrus.Fields{
 			"err": err,
 			"uri": originalURL,
@@ -132,16 +137,20 @@ func (pg *PostgresStore) AddURL(originalURL string) (string, error) {
 	var shortURL string
 	for {
 		shortURL = pg.gen.Next()
-		record, err := pg.getRecordByShortURL(ctx, shortURL)
-		if err != pgx.ErrNoRows {
+		_, err := pg.getRecordByShortURL(ctx, shortURL)
+		logrus.WithFields(logrus.Fields{
+			"shortURL": shortURL,
+			"err":      err,
+		}).Info("Attempt generate new short URL link")
+
+		if errors.Is(err, pgx.ErrNoRows) {
+			break
+		} else if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"err": err,
 				"uri": shortURL,
 			}).Error("failed to check existing short URL")
 			return "", err
-		}
-		if len(record.OriginalURL) == 0 {
-			break
 		}
 	}
 
@@ -157,27 +166,52 @@ func (pg *PostgresStore) AddURL(originalURL string) (string, error) {
 	return shortURL, nil
 }
 
-func (pg *PostgresStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, error) {
+func (pg *PostgresStore) AddURLs(ctx context.Context, urls models.BatchRequest) (models.BatchResponse, error) {
 	var responses models.BatchResponse
 
-	tx, err := pg.db.Begin(context.Background())
+	tx, err := pg.db.Begin(ctx)
 	if err != nil {
 		logrus.WithField("err", err).Error("Error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback(context.Background())
+	defer tx.Rollback(ctx)
 
-	query := `INSERT INTO short_urls (ID, original_url, short_url) VALUES ($1, $2, $3) ON CONFLICT (ID) DO NOTHING`
-	stmt, err := tx.Prepare(context.Background(), "insert-tx-stmt", query)
+	query := `INSERT INTO short_urls (ID, original_url, short_url) VALUES ($1, $2, $3) ON CONFLICT (short_url) DO NOTHING`
+	stmt, err := tx.Prepare(ctx, "insert-tx-stmt", query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 
 	for _, req := range urls {
-		logrus.WithField("uri", req.OriginalURL).Info("Work with url")
-		shortURL := pg.gen.Next()
+		record, errRecord := pg.getRecordByOriginalURL(ctx, req.OriginalURL)
+		if errRecord == nil {
+			responses = append(responses, models.ItemResponse{
+				CorrelationID: req.CorrelationID,
+				ShortURL:      fmt.Sprintf("http://%s/%s", pg.cfg.ServerAddress, record.ShortURL),
+			})
+			continue
+		} else if !errors.Is(errRecord, pgx.ErrNoRows) {
+			logrus.WithFields(logrus.Fields{
+				"err":         errRecord,
+				"originalURL": req.OriginalURL,
+			}).Error("failed to check existing original URL")
+		}
 
-		_, err := tx.Exec(context.Background(), stmt.SQL, req.CorrelationID, req.OriginalURL, shortURL)
+		var shortURL string
+		for {
+			shortURL = pg.gen.Next()
+			_, err := pg.getRecordByShortURL(ctx, shortURL)
+			if errors.Is(err, pgx.ErrNoRows) {
+				break
+			} else if err != nil {
+				logrus.WithFields(logrus.Fields{
+					"err": err,
+					"uri": shortURL,
+				}).Error("failed to check existing short URL")
+			}
+		}
+
+		_, err := tx.Exec(ctx, stmt.SQL, req.CorrelationID, req.OriginalURL, shortURL)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"err":      err,
@@ -193,7 +227,7 @@ func (pg *PostgresStore) AddURLs(urls models.BatchRequest) (models.BatchResponse
 		}
 	}
 
-	if err := tx.Commit(context.Background()); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		logrus.WithField("err", err).Error("Error committing transaction")
 		return nil, err
 	}
@@ -201,9 +235,7 @@ func (pg *PostgresStore) AddURLs(urls models.BatchRequest) (models.BatchResponse
 	return responses, nil
 }
 
-func (pg *PostgresStore) GetOriginalURL(shortURL string) (string, bool) {
-	ctx := context.Background()
-
+func (pg *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
 	record, err := pg.getRecordByShortURL(ctx, shortURL)
 	if err == nil {
 		return record.OriginalURL, true

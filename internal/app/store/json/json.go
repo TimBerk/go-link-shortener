@@ -80,7 +80,7 @@ func (s *JSONStore) saveStorage() error {
 	return nil
 }
 
-func (s *JSONStore) AddURL(originalURL string) (string, error) {
+func (s *JSONStore) AddURL(ctx context.Context, originalURL string) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -91,7 +91,7 @@ func (s *JSONStore) AddURL(originalURL string) (string, error) {
 	shortURL := s.gen.Next()
 
 	if _, exists := s.storage[shortURL]; exists {
-		return s.AddURL(originalURL)
+		return s.AddURL(ctx, originalURL)
 	}
 
 	record := JSONRecord{
@@ -111,7 +111,7 @@ func (s *JSONStore) AddURL(originalURL string) (string, error) {
 	return shortURL, nil
 }
 
-func (s *JSONStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, error) {
+func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest) (models.BatchResponse, error) {
 	var responses models.BatchResponse
 
 	s.mutex.Lock()
@@ -143,7 +143,7 @@ func (s *JSONStore) AddURLs(urls models.BatchRequest) (models.BatchResponse, err
 	return responses, nil
 }
 
-func (s *JSONStore) GetOriginalURL(shortURL string) (string, bool) {
+func (s *JSONStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
 	record, exists := s.storage[shortURL]
 	return record.OriginalURL, exists
 }
