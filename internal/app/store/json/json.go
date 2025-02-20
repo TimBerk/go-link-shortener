@@ -1,13 +1,16 @@
 package json
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
 
+	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type JSONRecord struct {
@@ -77,18 +80,18 @@ func (s *JSONStore) saveStorage() error {
 	return nil
 }
 
-func (s *JSONStore) AddURL(originalURL string) (string, error) {
+func (s *JSONStore) AddURL(ctx context.Context, originalURL string) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if record, exists := s.fullStorage[originalURL]; exists {
-		return record.ShortURL, nil
+		return record.ShortURL, store.ErrLinkExist
 	}
 
 	shortURL := s.gen.Next()
 
 	if _, exists := s.storage[shortURL]; exists {
-		return s.AddURL(originalURL)
+		return s.AddURL(ctx, originalURL)
 	}
 
 	record := JSONRecord{
@@ -102,12 +105,49 @@ func (s *JSONStore) AddURL(originalURL string) (string, error) {
 
 	err := s.saveStorage()
 	if err != nil {
-		return "", fmt.Errorf("error saving json store: %s", err)
+		logrus.WithField("err", err).Error("Error saving json store")
+		return "", err
 	}
 	return shortURL, nil
 }
 
-func (s *JSONStore) GetOriginalURL(shortURL string) (string, bool) {
+func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest) (models.BatchResponse, error) {
+	var responses models.BatchResponse
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	for _, req := range urls {
+		shortURL := s.gen.Next()
+
+		record := JSONRecord{
+			ShortURL:    shortURL,
+			OriginalURL: req.OriginalURL,
+			UUID:        req.CorrelationID,
+		}
+
+		s.storage[shortURL] = record
+		s.fullStorage[req.OriginalURL] = record
+
+		err := s.saveStorage()
+		if err != nil {
+			logrus.WithField("err", err).Error("Error saving json store")
+		} else {
+			responses = append(responses, models.ItemResponse{
+				CorrelationID: req.CorrelationID,
+				ShortURL:      shortURL,
+			})
+		}
+	}
+
+	return responses, nil
+}
+
+func (s *JSONStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
 	record, exists := s.storage[shortURL]
 	return record.OriginalURL, exists
+}
+
+func (s *JSONStore) Ping(ctx context.Context) error {
+	return nil
 }

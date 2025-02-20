@@ -2,9 +2,10 @@ package utils
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type JSONErrorResponse struct {
@@ -14,13 +15,13 @@ type JSONErrorResponse struct {
 func CheckParamInHeaderParam(r *http.Request, headerParam string, needParam string) bool {
 	headerValue := r.Header.Get(headerParam)
 	if headerValue == "" {
-		log.Printf("Header param (%s) is empty.", headerParam)
+		logrus.WithField("headerParam", headerParam).Error("Header param is empty")
 		return false
 	}
 
 	parts := strings.Split(headerValue, ";")
 	if len(parts) < 1 {
-		log.Printf("Header param (%s) is malformed.", headerParam)
+		logrus.WithField("headerParam", headerParam).Error("Header param is malformed")
 		return false
 	}
 
@@ -29,7 +30,10 @@ func CheckParamInHeaderParam(r *http.Request, headerParam string, needParam stri
 		return true
 	}
 
-	log.Printf("Header param (%s) has not param (%s).", headerParam, needParam)
+	logrus.WithFields(logrus.Fields{
+		"needParam":   needParam,
+		"headerParam": headerParam,
+	}).Error("Header param has not param")
 	return false
 }
 
@@ -39,7 +43,11 @@ func WriteJSONError(w http.ResponseWriter, message string, statusCode int) {
 		Error: message,
 	}
 
-	log.Printf("JSONError - (%s): [(%s)] %d", w.Header(), message, statusCode)
+	logrus.WithFields(logrus.Fields{
+		"header":     w.Header(),
+		"message":    message,
+		"statusCode": statusCode,
+	}).Error("JSON Error")
 
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)

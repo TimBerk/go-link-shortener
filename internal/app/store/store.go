@@ -1,13 +1,19 @@
 package store
 
 import (
+	"context"
+	"errors"
 	"math/rand"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 )
 
 const (
 	chars  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 	length = 6
 )
+
+var ErrLinkExist = errors.New("short link exist for original url")
 
 type IDGenerator struct{}
 
@@ -28,7 +34,9 @@ func (g *IDGenerator) Next() string {
 	return string(id)
 }
 
-type MainStoreInterface interface {
-	AddURL(originalURL string) (string, error)
-	GetOriginalURL(shortURL string) (string, bool)
+type Store interface {
+	AddURL(ctx context.Context, originalURL string) (string, error)
+	AddURLs(ctx context.Context, urls batch.BatchRequest) (batch.BatchResponse, error)
+	GetOriginalURL(ctx context.Context, shortURL string) (string, bool)
+	Ping(ctx context.Context) error
 }

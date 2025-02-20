@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -14,9 +15,10 @@ import (
 )
 
 func TestShortenURL(t *testing.T) {
+	ctx := context.Background()
 	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
 	mockStore := new(MockURLStore)
-	testHandler := NewHandler(mockStore, mockConfig)
+	testHandler := NewHandler(mockStore, mockConfig, ctx)
 
 	tests := []struct {
 		name               string
@@ -70,6 +72,7 @@ func TestShortenURL(t *testing.T) {
 func TestAddURL_Concurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	var results []string
+	ctx := context.Background()
 	testGen := store.NewIDGenerator()
 	testStore, _ := local.NewURLStore(testGen)
 	originalURL := "https://example.com"
@@ -78,7 +81,7 @@ func TestAddURL_Concurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			shortLink, _ := testStore.AddURL(originalURL)
+			shortLink, _ := testStore.AddURL(ctx, originalURL)
 			results = append(results, shortLink)
 		}()
 	}
