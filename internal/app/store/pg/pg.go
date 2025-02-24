@@ -24,6 +24,7 @@ type PgRecord struct {
 	ID          string
 	OriginalURL string
 	ShortURL    string
+	IsDeleted   bool
 }
 
 func NewPgPool(ctx context.Context, connString string) (*PostgresStore, error) {
@@ -90,7 +91,8 @@ func (pg *PostgresStore) createTable(ctx context.Context) error {
     CREATE TABLE IF NOT EXISTS short_urls (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         original_url TEXT NOT NULL UNIQUE,
-        short_url VARCHAR(6) NOT NULL UNIQUE
+        short_url VARCHAR(6) NOT NULL UNIQUE,
+        is_deleted BOOLEAN NOT NULL DEFAULT false
     );`
 	_, err := pg.db.Exec(ctx, query)
 	return err
@@ -99,14 +101,14 @@ func (pg *PostgresStore) createTable(ctx context.Context) error {
 func (pg *PostgresStore) getRecordByOriginalURL(ctx context.Context, originalURL string) (PgRecord, error) {
 	var record PgRecord
 	query := `SELECT * FROM short_urls WHERE original_url = $1`
-	err := pg.db.QueryRow(ctx, query, originalURL).Scan(&record.ID, &record.OriginalURL, &record.ShortURL)
+	err := pg.db.QueryRow(ctx, query, originalURL).Scan(&record.ID, &record.OriginalURL, &record.ShortURL, &record.IsDeleted)
 	return record, err
 }
 
 func (pg *PostgresStore) getRecordByShortURL(ctx context.Context, shortURL string) (PgRecord, error) {
 	var record PgRecord
 	query := `SELECT * FROM short_urls WHERE short_url = $1`
-	err := pg.db.QueryRow(ctx, query, shortURL).Scan(&record.ID, &record.OriginalURL, &record.ShortURL)
+	err := pg.db.QueryRow(ctx, query, shortURL).Scan(&record.ID, &record.OriginalURL, &record.ShortURL, &record.IsDeleted)
 	return record, err
 }
 
@@ -235,15 +237,21 @@ func (pg *PostgresStore) AddURLs(ctx context.Context, urls models.BatchRequest) 
 	return responses, nil
 }
 
-func (pg *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
+func (pg *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool) {
 	record, err := pg.getRecordByShortURL(ctx, shortURL)
 	if err == nil {
-		return record.OriginalURL, true
+		return record.OriginalURL, true, record.IsDeleted
 	}
 
 	logrus.WithFields(logrus.Fields{
 		"uri": shortURL,
 		"err": err,
 	}).Error("Short URL not found")
-	return "", false
+	return "", false, false
+}
+
+func (pg *PostgresStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
+	query := `UPDATE short_urls SET is_deleted = true WHERE short_url = $1`
+	_, err := pg.db.Exec(ctx, query, shortURL)
+	return err
 }

@@ -20,6 +20,7 @@ func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Cont
 
 	router.Get("/ping", handler.Ping)
 	router.Get("/api/user/urls", handler.UserURLsHandler)
+	router.Delete("/api/user/urls", handler.DeleteURLsHandler)
 	router.Post("/api/shorten/batch", handler.ShortenBatch)
 	router.Post("/api/shorten", handler.ShortenJSONURL)
 	router.Get("/{id}", handler.Redirect)

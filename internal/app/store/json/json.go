@@ -143,11 +143,15 @@ func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest) (mode
 	return responses, nil
 }
 
-func (s *JSONStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
+func (s *JSONStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool) {
 	record, exists := s.storage[shortURL]
-	return record.OriginalURL, exists
+	return record.OriginalURL, exists, false
 }
 
 func (s *JSONStore) Ping(ctx context.Context) error {
+	return nil
+}
+
+func (s *JSONStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
 	return nil
 }

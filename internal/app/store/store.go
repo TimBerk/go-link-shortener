@@ -37,6 +37,7 @@ func (g *IDGenerator) Next() string {
 type Store interface {
 	AddURL(ctx context.Context, originalURL string) (string, error)
 	AddURLs(ctx context.Context, urls batch.BatchRequest) (batch.BatchResponse, error)
-	GetOriginalURL(ctx context.Context, shortURL string) (string, bool)
+	GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool)
 	Ping(ctx context.Context) error
+	DeleteURL(ctx context.Context, shortURL string, userID string) error
 }
