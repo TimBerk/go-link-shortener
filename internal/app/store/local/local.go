@@ -70,11 +70,15 @@ func (s *URLStore) AddURLs(ctx context.Context, urls models.BatchRequest) (model
 	return responses, nil
 }
 
-func (s *URLStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
+func (s *URLStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool) {
 	originalURL, exists := s.linksMap[shortURL]
-	return originalURL, exists
+	return originalURL, exists, false
 }
 
 func (s *URLStore) Ping(ctx context.Context) error {
+	return nil
+}
+
+func (s *URLStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
 	return nil
 }

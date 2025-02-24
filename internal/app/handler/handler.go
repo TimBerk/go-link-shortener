@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -130,13 +131,20 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
-	originalURL, exists := h.store.GetOriginalURL(h.ctx, shortURL)
+	originalURL, exists, isDeleted := h.store.GetOriginalURL(h.ctx, shortURL)
 	if !exists {
 		logrus.WithFields(logrus.Fields{
 			"uri":      originalURL,
 			"shortUri": shortURL,
 		}).Error("Short URL not found")
 		http.Error(w, "Short URL not found", http.StatusNotFound)
+		return
+	} else if isDeleted {
+		logrus.WithFields(logrus.Fields{
+			"uri":      originalURL,
+			"shortUri": shortURL,
+		}).Error("Short URL is deleted")
+		http.Error(w, "Short URL is deleted", http.StatusGone)
 		return
 	}
 
@@ -207,4 +215,50 @@ func (h *Handler) UserURLsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(urls)
+}
+
+func (h *Handler) DeleteURLsHandler(w http.ResponseWriter, r *http.Request) {
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var shortURLs []string
+	if err := json.NewDecoder(r.Body).Decode(&shortURLs); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var wg sync.WaitGroup
+	urlChan := make(chan string)
+
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for shortURL := range urlChan {
+				err := h.store.DeleteURL(h.ctx, shortURL, userID)
+				if err != nil {
+					logrus.WithField("err", err).Error("Failed to mark URL as deleted")
+				}
+			}
+		}()
+	}
+
+	go func() {
+		defer close(urlChan)
+		for _, shortURL := range shortURLs {
+			select {
+			case urlChan <- shortURL:
+			case <-h.ctx.Done():
+				logrus.Info("Context cancelled, stopping URL processing")
+				return
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	w.WriteHeader(http.StatusAccepted)
 }

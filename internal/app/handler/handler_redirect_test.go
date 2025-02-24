@@ -19,8 +19,8 @@ type MockStore struct {
 	addedURLs   batch.BatchRequest
 }
 
-func (m *MockStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
-	return m.originalURL, m.exists
+func (m *MockStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool) {
+	return m.originalURL, m.exists, false
 }
 
 func (m *MockStore) AddURLs(ctx context.Context, urls batch.BatchRequest) (batch.BatchResponse, error) {
@@ -37,6 +37,10 @@ func (m *MockStore) AddURL(ctx context.Context, url string) (string, error) {
 }
 
 func (m *MockStore) Ping(ctx context.Context) error {
+	return nil
+}
+
+func (m *MockStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
 	return nil
 }
 

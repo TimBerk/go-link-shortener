@@ -132,7 +132,7 @@ func TestGetOriginalURL(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			originalURL, exists := test.store.GetOriginalURL(ctx, test.shortURL)
+			originalURL, exists, _ := test.store.GetOriginalURL(ctx, test.shortURL)
 
 			assert.Equal(t, test.originalURL, originalURL, "Incorrect original URL for test: %s", test.name)
 			assert.Equal(t, test.exists, exists, "Incorrect flag exists for test: %s", test.name)

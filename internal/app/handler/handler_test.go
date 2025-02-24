@@ -28,11 +28,14 @@ func (m *MockURLStore) AddURLs(ctx context.Context, urls batch.BatchRequest) (ba
 	return responses, nil
 }
 
-func (m *MockURLStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool) {
+func (m *MockURLStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool) {
 	args := m.Called(shortURL)
-	return args.String(0), args.Bool(1)
+	return args.String(0), args.Bool(1), false
 }
 
 func (m *MockURLStore) Ping(ctx context.Context) error {
+	return nil
+}
+func (m *MockURLStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
 	return nil
 }
