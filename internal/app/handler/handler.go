@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,9 +17,19 @@ import (
 	"github.com/mailru/easyjson"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	"github.com/TimBerk/go-link-shortener/internal/pkg/cookies"
 	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
 	"github.com/go-chi/chi/v5"
 )
+
+var userURLs = make(map[string][]map[string]string)
+
+func addShortURL(userID, shortURL, originalURL string) {
+	userURLs[userID] = append(userURLs[userID], map[string]string{
+		"short_url":    shortURL,
+		"original_url": originalURL,
+	})
+}
 
 type Handler struct {
 	store store.Store
@@ -43,6 +54,12 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
 	shortURL, err := h.store.AddURL(h.ctx, originalURL)
 	existLink := errors.Is(err, store.ErrLinkExist)
 	if err != nil && !existLink {
@@ -51,6 +68,7 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
+	addShortURL(userID, fullShortURL, originalURL)
 
 	if !existLink {
 		w.WriteHeader(http.StatusCreated)
@@ -79,6 +97,12 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
 	shortURL, err := h.store.AddURL(h.ctx, jsonBody.URL)
 	existLink := errors.Is(err, store.ErrLinkExist)
 	if err != nil && !existLink {
@@ -88,6 +112,7 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 
 	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
 	responseJSON := simple.ResponseJSON{Result: fullShortURL}
+	addShortURL(userID, fullShortURL, jsonBody.URL)
 
 	response, err := easyjson.Marshal(responseJSON)
 	if err != nil {
@@ -165,4 +190,21 @@ func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(response)
+}
+
+func (h *Handler) UserURLsHandler(w http.ResponseWriter, r *http.Request) {
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
+	urls, exists := userURLs[userID]
+	if !exists || len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(urls)
 }
