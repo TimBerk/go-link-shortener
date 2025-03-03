@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"context"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,9 +15,10 @@ import (
 
 func TestShortenJsonURLHandler(t *testing.T) {
 	ctx := context.Background()
+	urlChan := make(chan store.URLPair, 1000)
 	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
 	mockStore := new(MockURLStore)
-	testHandler := NewHandler(mockStore, mockConfig, ctx)
+	testHandler := NewHandler(mockStore, mockConfig, ctx, urlChan)
 
 	tests := []struct {
 		name               string

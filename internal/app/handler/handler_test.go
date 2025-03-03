@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/stretchr/testify/mock"
@@ -36,6 +37,6 @@ func (m *MockURLStore) GetOriginalURL(ctx context.Context, shortURL string) (str
 func (m *MockURLStore) Ping(ctx context.Context) error {
 	return nil
 }
-func (m *MockURLStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
+func (m *MockURLStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
 	return nil
 }

@@ -11,8 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Context) chi.Router {
-	handler := handler.NewHandler(dataStore, cfg, ctx)
+func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Context, urlChan chan store.URLPair) chi.Router {
+	handler := handler.NewHandler(dataStore, cfg, ctx, urlChan)
 
 	router := chi.NewRouter()
 	router.Use(logger.RequestLogger)

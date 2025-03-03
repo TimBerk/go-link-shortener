@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -33,13 +32,14 @@ func addShortURL(userID, shortURL, originalURL string) {
 }
 
 type Handler struct {
-	store store.Store
-	cfg   *config.Config
-	ctx   context.Context
+	store   store.Store
+	cfg     *config.Config
+	ctx     context.Context
+	urlChan chan store.URLPair
 }
 
-func NewHandler(store store.Store, cfg *config.Config, ctx context.Context) *Handler {
-	return &Handler{store: store, cfg: cfg, ctx: ctx}
+func NewHandler(store store.Store, cfg *config.Config, ctx context.Context, urlChan chan store.URLPair) *Handler {
+	return &Handler{store: store, cfg: cfg, ctx: ctx, urlChan: urlChan}
 }
 
 func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
@@ -230,35 +230,10 @@ func (h *Handler) DeleteURLsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	urlChan := make(chan string)
-
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for shortURL := range urlChan {
-				err := h.store.DeleteURL(h.ctx, shortURL, userID)
-				if err != nil {
-					logrus.WithField("err", err).Error("Failed to mark URL as deleted")
-				}
-			}
-		}()
+	// Отправляем данные в канал
+	for _, shortURL := range shortURLs {
+		h.urlChan <- store.URLPair{ShortURL: shortURL, UserID: userID}
 	}
-
-	go func() {
-		defer close(urlChan)
-		for _, shortURL := range shortURLs {
-			select {
-			case urlChan <- shortURL:
-			case <-h.ctx.Done():
-				logrus.Info("Context cancelled, stopping URL processing")
-				return
-			}
-		}
-	}()
-
-	wg.Wait()
 
 	w.WriteHeader(http.StatusAccepted)
 }

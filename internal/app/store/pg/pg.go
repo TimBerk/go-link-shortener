@@ -250,8 +250,21 @@ func (pg *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (s
 	return "", false, false
 }
 
-func (pg *PostgresStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
-	query := `UPDATE short_urls SET is_deleted = true WHERE short_url = $1`
-	_, err := pg.db.Exec(ctx, query, shortURL)
+func (pg *PostgresStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
+	if len(batch) == 0 {
+		return nil
+	}
+
+	shortURLs := make([]string, 0, len(batch))
+	for _, pair := range batch {
+		shortURLs = append(shortURLs, pair.ShortURL)
+	}
+
+	query := `
+		UPDATE short_urls
+		SET is_deleted = true
+		WHERE short_url IN (SELECT unnest($1::text[]))`
+
+	_, err := pg.db.Exec(ctx, query, shortURLs)
 	return err
 }

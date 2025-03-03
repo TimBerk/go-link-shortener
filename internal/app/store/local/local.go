@@ -11,6 +11,7 @@ import (
 type URLStore struct {
 	linksMap    map[string]string
 	originalMap map[string]string
+	userMap     map[string]string
 	gen         store.Generator
 	mutex       sync.Mutex
 }
@@ -19,6 +20,7 @@ func NewURLStore(gen store.Generator) (*URLStore, error) {
 	return &URLStore{
 		linksMap:    make(map[string]string),
 		originalMap: make(map[string]string),
+		userMap:     make(map[string]string),
 		gen:         gen,
 	}, nil
 }
@@ -79,6 +81,18 @@ func (s *URLStore) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (s *URLStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
+func (s *URLStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
+	if len(batch) == 0 {
+		return nil
+	}
+
+	for _, pair := range batch {
+		originalURL, exists := s.linksMap[pair.ShortURL]
+		if exists {
+			delete(s.originalMap, originalURL)
+		}
+		delete(s.linksMap, pair.ShortURL)
+	}
+
 	return nil
 }

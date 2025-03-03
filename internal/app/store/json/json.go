@@ -152,6 +152,18 @@ func (s *JSONStore) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (s *JSONStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
+func (s *JSONStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
+	if len(batch) == 0 {
+		return nil
+	}
+
+	for _, pair := range batch {
+		originalURL, exists, _ := s.GetOriginalURL(ctx, pair.ShortURL)
+		if exists {
+			delete(s.fullStorage, originalURL)
+		}
+		delete(s.storage, pair.ShortURL)
+	}
+
 	return nil
 }

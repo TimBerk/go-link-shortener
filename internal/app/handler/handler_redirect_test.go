@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -40,15 +41,16 @@ func (m *MockStore) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (m *MockStore) DeleteURL(ctx context.Context, shortURL string, userID string) error {
+func (m *MockStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
 	return nil
 }
 
 func TestShortenURL_Success(t *testing.T) {
 	ctx := context.Background()
+	urlChan := make(chan store.URLPair, 1000)
 	mockConfig := config.NewConfig("localhost:8021", "http://base.url", true)
 	mockStore := &MockStore{}
-	handler := NewHandler(mockStore, mockConfig, ctx)
+	handler := NewHandler(mockStore, mockConfig, ctx, urlChan)
 	body := strings.NewReader("https://example.com")
 	req := httptest.NewRequest(http.MethodPost, "/shorten", body)
 	req.Header.Set("Content-Type", "text/plain")
@@ -63,12 +65,13 @@ func TestShortenURL_Success(t *testing.T) {
 
 func TestRedirect_Success(t *testing.T) {
 	ctx := context.Background()
+	urlChan := make(chan store.URLPair, 1000)
 	mockConfig := config.NewConfig("localhost:8021", "http://base:url", true)
 	mockStore := &MockStore{
 		originalURL: "https://example.com",
 		exists:      true,
 	}
-	handler := NewHandler(mockStore, mockConfig, ctx)
+	handler := NewHandler(mockStore, mockConfig, ctx, urlChan)
 	req := httptest.NewRequest(http.MethodGet, "/abc123", nil)
 	w := httptest.NewRecorder()
 

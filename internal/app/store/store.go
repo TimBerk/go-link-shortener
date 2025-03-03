@@ -34,10 +34,15 @@ func (g *IDGenerator) Next() string {
 	return string(id)
 }
 
+type URLPair struct {
+	ShortURL string
+	UserID   string
+}
+
 type Store interface {
 	AddURL(ctx context.Context, originalURL string) (string, error)
 	AddURLs(ctx context.Context, urls batch.BatchRequest) (batch.BatchResponse, error)
 	GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool)
 	Ping(ctx context.Context) error
-	DeleteURL(ctx context.Context, shortURL string, userID string) error
+	DeleteURL(ctx context.Context, batch []URLPair) error
 }
