@@ -29,8 +29,8 @@ func TestAddURL(t *testing.T) {
 		{
 			name: "Add new value in empty Store",
 			store: &URLStore{
-				linksMap:    map[string]string{},
-				originalMap: map[string]string{},
+				linksMap:    map[string]UserLink{},
+				originalMap: map[string]UserLink{},
 				gen:         base.NewIDGenerator(),
 			},
 			originalURL: "localhost:8080",
@@ -39,8 +39,8 @@ func TestAddURL(t *testing.T) {
 		{
 			name: "Add new value in Store",
 			store: &URLStore{
-				linksMap:    map[string]string{"short1": "localhost:9090"},
-				originalMap: map[string]string{"localhost:9090": "short1"},
+				linksMap:    map[string]UserLink{"short1": UserLink{"test", "localhost:9090"}},
+				originalMap: map[string]UserLink{"localhost:9090": UserLink{"test", "short1"}},
 				gen:         base.NewIDGenerator(),
 			},
 			originalURL: "localhost:8080",
@@ -49,8 +49,8 @@ func TestAddURL(t *testing.T) {
 		{
 			name: "Add exist value in Store",
 			store: &URLStore{
-				linksMap:    map[string]string{"short2": "localhost:8080"},
-				originalMap: map[string]string{"localhost:8080": "short2"},
+				linksMap:    map[string]UserLink{"short2": UserLink{"test", "localhost:8080"}},
+				originalMap: map[string]UserLink{"localhost:8080": UserLink{"test", "short2"}},
 				gen:         base.NewIDGenerator(),
 			},
 			originalURL: "localhost:8080",
@@ -70,7 +70,7 @@ func TestAddURL(t *testing.T) {
 			)
 			defer patch.Unpatch()
 
-			currentLink, _ := test.store.AddURL(ctx, test.originalURL)
+			currentLink, _ := test.store.AddURL(ctx, test.originalURL, "test")
 
 			assert.Equal(
 				t,
@@ -98,8 +98,8 @@ func TestGetOriginalURL(t *testing.T) {
 		{
 			name: "Get url from empty Store",
 			store: &URLStore{
-				linksMap:    map[string]string{},
-				originalMap: map[string]string{},
+				linksMap:    map[string]UserLink{},
+				originalMap: map[string]UserLink{},
 				gen:         base.NewIDGenerator(),
 			},
 			shortURL:    "short1",
@@ -109,8 +109,8 @@ func TestGetOriginalURL(t *testing.T) {
 		{
 			name: "Get exist value in Store",
 			store: &URLStore{
-				linksMap:    map[string]string{"short1": "localhost:9090"},
-				originalMap: map[string]string{"localhost:9090": "short1"},
+				linksMap:    map[string]UserLink{"short1": UserLink{"test", "localhost:9090"}},
+				originalMap: map[string]UserLink{"localhost:9090": UserLink{"test", "short1"}},
 				gen:         base.NewIDGenerator(),
 			},
 			shortURL:    "short1",
@@ -120,8 +120,8 @@ func TestGetOriginalURL(t *testing.T) {
 		{
 			name: "Get not exist value in Store",
 			store: &URLStore{
-				linksMap:    map[string]string{"short2": "localhost:8080"},
-				originalMap: map[string]string{"localhost:8080": "short2"},
+				linksMap:    map[string]UserLink{"short2": UserLink{"test", "localhost:8080"}},
+				originalMap: map[string]UserLink{"localhost:8080": UserLink{"test", "short2"}},
 				gen:         base.NewIDGenerator(),
 			},
 			shortURL:    "short1",
@@ -132,7 +132,7 @@ func TestGetOriginalURL(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			originalURL, exists, _ := test.store.GetOriginalURL(ctx, test.shortURL)
+			originalURL, exists, _ := test.store.GetOriginalURL(ctx, test.shortURL, "test")
 
 			assert.Equal(t, test.originalURL, originalURL, "Incorrect original URL for test: %s", test.name)
 			assert.Equal(t, test.exists, exists, "Incorrect flag exists for test: %s", test.name)

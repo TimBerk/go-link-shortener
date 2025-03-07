@@ -17,6 +17,7 @@ type JSONRecord struct {
 	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	UserID      string `json:"user_id"`
 }
 
 type JSONStore struct {
@@ -80,24 +81,27 @@ func (s *JSONStore) saveStorage() error {
 	return nil
 }
 
-func (s *JSONStore) AddURL(ctx context.Context, originalURL string) (string, error) {
+func (s *JSONStore) AddURL(ctx context.Context, originalURL string, userID string) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if record, exists := s.fullStorage[originalURL]; exists {
+	record, exists := s.fullStorage[originalURL]
+	if exists && record.UserID == userID {
 		return record.ShortURL, store.ErrLinkExist
 	}
 
 	shortURL := s.gen.Next()
 
-	if _, exists := s.storage[shortURL]; exists {
-		return s.AddURL(ctx, originalURL)
+	record, exists = s.storage[shortURL]
+	if exists && record.UserID == userID {
+		return s.AddURL(ctx, originalURL, userID)
 	}
 
-	record := JSONRecord{
+	record = JSONRecord{
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 		UUID:        uuid.New().String(),
+		UserID:      userID,
 	}
 
 	s.storage[shortURL] = record
@@ -111,7 +115,7 @@ func (s *JSONStore) AddURL(ctx context.Context, originalURL string) (string, err
 	return shortURL, nil
 }
 
-func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest) (models.BatchResponse, error) {
+func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest, userID string) (models.BatchResponse, error) {
 	var responses models.BatchResponse
 
 	s.mutex.Lock()
@@ -124,6 +128,7 @@ func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest) (mode
 			ShortURL:    shortURL,
 			OriginalURL: req.OriginalURL,
 			UUID:        req.CorrelationID,
+			UserID:      userID,
 		}
 
 		s.storage[shortURL] = record
@@ -143,7 +148,7 @@ func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest) (mode
 	return responses, nil
 }
 
-func (s *JSONStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool) {
+func (s *JSONStore) GetOriginalURL(ctx context.Context, shortURL string, userID string) (string, bool, bool) {
 	record, exists := s.storage[shortURL]
 	return record.OriginalURL, exists, false
 }
@@ -158,11 +163,11 @@ func (s *JSONStore) DeleteURL(ctx context.Context, batch []store.URLPair) error 
 	}
 
 	for _, pair := range batch {
-		originalURL, exists, _ := s.GetOriginalURL(ctx, pair.ShortURL)
-		if exists {
-			delete(s.fullStorage, originalURL)
+		userLink, exists := s.storage[pair.ShortURL]
+		if exists && userLink.UserID == pair.UserID {
+			delete(s.fullStorage, userLink.OriginalURL)
+			delete(s.storage, pair.ShortURL)
 		}
-		delete(s.storage, pair.ShortURL)
 	}
 
 	return nil

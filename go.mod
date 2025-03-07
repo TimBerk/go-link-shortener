@@ -1,11 +1,12 @@
 module github.com/TimBerk/go-link-shortener
 
-go 1.22
+go 1.22.1
 
 require (
 	bou.ke/monkey v1.0.2
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/securecookie v1.1.2
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/mailru/easyjson v0.9.0
 	github.com/sirupsen/logrus v1.9.3
@@ -14,7 +15,6 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect

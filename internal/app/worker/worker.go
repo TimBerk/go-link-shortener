@@ -16,7 +16,8 @@ func Worker(ctx context.Context, dataStore store.Store, urlChan <-chan store.URL
 	defer wg.Done()
 
 	var batch []store.URLPair
-	timer := time.NewTimer(5 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
@@ -31,17 +32,18 @@ func Worker(ctx context.Context, dataStore store.Store, urlChan <-chan store.URL
 			if len(batch) >= batchLimit {
 				flushBatch(ctx, batch, dataStore)
 				batch = nil
-				timer.Reset(5 * time.Second)
 			}
-		case <-timer.C:
+		case <-ticker.C:
 			if len(batch) > 0 {
 				flushBatch(ctx, batch, dataStore)
 				batch = nil
 			}
-			timer.Reset(5 * time.Second)
 		case <-ctx.Done():
 			if len(batch) > 0 {
-				flushBatch(ctx, batch, dataStore)
+				newCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
+				flushBatch(newCtx, batch, dataStore)
 			}
 			return
 		}

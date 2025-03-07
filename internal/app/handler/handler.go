@@ -61,7 +61,7 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		cookies.SetUserCookie(w, userID)
 	}
 
-	shortURL, err := h.store.AddURL(h.ctx, originalURL)
+	shortURL, err := h.store.AddURL(h.ctx, originalURL, userID)
 	existLink := errors.Is(err, store.ErrLinkExist)
 	if err != nil && !existLink {
 		http.Error(w, "Error getting url", http.StatusBadRequest)
@@ -104,7 +104,7 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 		cookies.SetUserCookie(w, userID)
 	}
 
-	shortURL, err := h.store.AddURL(h.ctx, jsonBody.URL)
+	shortURL, err := h.store.AddURL(h.ctx, jsonBody.URL, userID)
 	existLink := errors.Is(err, store.ErrLinkExist)
 	if err != nil && !existLink {
 		utils.WriteJSONError(w, "Error getting url", http.StatusBadRequest)
@@ -130,8 +130,14 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
 	shortURL := chi.URLParam(r, "id")
-	originalURL, exists, isDeleted := h.store.GetOriginalURL(h.ctx, shortURL)
+	originalURL, exists, isDeleted := h.store.GetOriginalURL(h.ctx, shortURL, userID)
 	if !exists {
 		logrus.WithFields(logrus.Fields{
 			"uri":      originalURL,
@@ -169,6 +175,12 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	var batchRequests batch.BatchRequest
 
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
 	if err := easyjson.UnmarshalFromReader(r.Body, &batchRequests); err != nil {
 		logrus.WithField("err", err).Error("Invalid request body")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -181,7 +193,7 @@ func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	batchResponses, err := h.store.AddURLs(h.ctx, batchRequests)
+	batchResponses, err := h.store.AddURLs(h.ctx, batchRequests, userID)
 	if err != nil {
 		logrus.WithField("err", err).Error("Error shortening URLs")
 		http.Error(w, fmt.Sprintf("Error shortening URLs: %v", err), http.StatusInternalServerError)
@@ -232,6 +244,10 @@ func (h *Handler) DeleteURLsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Отправляем данные в канал
 	for _, shortURL := range shortURLs {
+		logrus.WithFields(logrus.Fields{
+			"shortURL": shortURL,
+			"UserID":   userID,
+		}).Info("Deleted user link")
 		h.urlChan <- store.URLPair{ShortURL: shortURL, UserID: userID}
 	}
 

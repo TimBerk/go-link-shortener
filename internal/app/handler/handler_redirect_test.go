@@ -20,11 +20,11 @@ type MockStore struct {
 	addedURLs   batch.BatchRequest
 }
 
-func (m *MockStore) GetOriginalURL(ctx context.Context, shortURL string) (string, bool, bool) {
+func (m *MockStore) GetOriginalURL(ctx context.Context, shortURL string, userID string) (string, bool, bool) {
 	return m.originalURL, m.exists, false
 }
 
-func (m *MockStore) AddURLs(ctx context.Context, urls batch.BatchRequest) (batch.BatchResponse, error) {
+func (m *MockStore) AddURLs(ctx context.Context, urls batch.BatchRequest, userID string) (batch.BatchResponse, error) {
 	m.addedURLs = urls
 
 	responses := make(batch.BatchResponse, 1)
@@ -32,7 +32,7 @@ func (m *MockStore) AddURLs(ctx context.Context, urls batch.BatchRequest) (batch
 	return responses, nil
 }
 
-func (m *MockStore) AddURL(ctx context.Context, url string) (string, error) {
+func (m *MockStore) AddURL(ctx context.Context, url string, userID string) (string, error) {
 	m.addedURL = url
 	return "abc123", nil
 }

@@ -21,11 +21,16 @@ func GenerateUserID() string {
 	return base64.URLEncoding.EncodeToString(b)
 }
 
-func SetUserCookie(w http.ResponseWriter, userID string) {
+func GetEncodedValue(userID string) (string, error) {
 	value := map[string]string{
 		"user_id": userID,
 	}
-	if encoded, err := s.Encode("user", value); err == nil {
+	return s.Encode("user", value)
+}
+
+func SetUserCookie(w http.ResponseWriter, userID string) {
+	encoded, err := GetEncodedValue(userID)
+	if err == nil {
 		cookie := &http.Cookie{
 			Name:     "user",
 			Value:    encoded,
