@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,18 +17,29 @@ import (
 	"github.com/mailru/easyjson"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	"github.com/TimBerk/go-link-shortener/internal/pkg/cookies"
 	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
 	"github.com/go-chi/chi/v5"
 )
 
-type Handler struct {
-	store store.Store
-	cfg   *config.Config
-	ctx   context.Context
+var userURLs = make(map[string][]map[string]string)
+
+func addShortURL(userID, shortURL, originalURL string) {
+	userURLs[userID] = append(userURLs[userID], map[string]string{
+		"short_url":    shortURL,
+		"original_url": originalURL,
+	})
 }
 
-func NewHandler(store store.Store, cfg *config.Config, ctx context.Context) *Handler {
-	return &Handler{store: store, cfg: cfg, ctx: ctx}
+type Handler struct {
+	store   store.Store
+	cfg     *config.Config
+	ctx     context.Context
+	urlChan chan store.URLPair
+}
+
+func NewHandler(store store.Store, cfg *config.Config, ctx context.Context, urlChan chan store.URLPair) *Handler {
+	return &Handler{store: store, cfg: cfg, ctx: ctx, urlChan: urlChan}
 }
 
 func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +55,13 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := h.store.AddURL(h.ctx, originalURL)
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
+	shortURL, err := h.store.AddURL(h.ctx, originalURL, userID)
 	existLink := errors.Is(err, store.ErrLinkExist)
 	if err != nil && !existLink {
 		http.Error(w, "Error getting url", http.StatusBadRequest)
@@ -51,6 +69,7 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
+	addShortURL(userID, fullShortURL, originalURL)
 
 	if !existLink {
 		w.WriteHeader(http.StatusCreated)
@@ -79,7 +98,13 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := h.store.AddURL(h.ctx, jsonBody.URL)
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
+	shortURL, err := h.store.AddURL(h.ctx, jsonBody.URL, userID)
 	existLink := errors.Is(err, store.ErrLinkExist)
 	if err != nil && !existLink {
 		utils.WriteJSONError(w, "Error getting url", http.StatusBadRequest)
@@ -88,6 +113,7 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 
 	fullShortURL := fmt.Sprintf("http://%s/%s", h.cfg.ServerAddress, shortURL)
 	responseJSON := simple.ResponseJSON{Result: fullShortURL}
+	addShortURL(userID, fullShortURL, jsonBody.URL)
 
 	response, err := easyjson.Marshal(responseJSON)
 	if err != nil {
@@ -104,14 +130,27 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
 	shortURL := chi.URLParam(r, "id")
-	originalURL, exists := h.store.GetOriginalURL(h.ctx, shortURL)
+	originalURL, exists, isDeleted := h.store.GetOriginalURL(h.ctx, shortURL, userID)
 	if !exists {
 		logrus.WithFields(logrus.Fields{
 			"uri":      originalURL,
 			"shortUri": shortURL,
 		}).Error("Short URL not found")
 		http.Error(w, "Short URL not found", http.StatusNotFound)
+		return
+	} else if isDeleted {
+		logrus.WithFields(logrus.Fields{
+			"uri":      originalURL,
+			"shortUri": shortURL,
+		}).Error("Short URL is deleted")
+		http.Error(w, "Short URL is deleted", http.StatusGone)
 		return
 	}
 
@@ -136,6 +175,12 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	var batchRequests batch.BatchRequest
 
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
 	if err := easyjson.UnmarshalFromReader(r.Body, &batchRequests); err != nil {
 		logrus.WithField("err", err).Error("Invalid request body")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -148,7 +193,7 @@ func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	batchResponses, err := h.store.AddURLs(h.ctx, batchRequests)
+	batchResponses, err := h.store.AddURLs(h.ctx, batchRequests, userID)
 	if err != nil {
 		logrus.WithField("err", err).Error("Error shortening URLs")
 		http.Error(w, fmt.Sprintf("Error shortening URLs: %v", err), http.StatusInternalServerError)
@@ -165,4 +210,46 @@ func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(response)
+}
+
+func (h *Handler) UserURLsHandler(w http.ResponseWriter, r *http.Request) {
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		userID = cookies.GenerateUserID()
+		cookies.SetUserCookie(w, userID)
+	}
+
+	urls, exists := userURLs[userID]
+	if !exists || len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(urls)
+}
+
+func (h *Handler) DeleteURLsHandler(w http.ResponseWriter, r *http.Request) {
+	userID, err := cookies.GetUserID(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var shortURLs []string
+	if err := json.NewDecoder(r.Body).Decode(&shortURLs); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Отправляем данные в канал
+	for _, shortURL := range shortURLs {
+		logrus.WithFields(logrus.Fields{
+			"shortURL": shortURL,
+			"UserID":   userID,
+		}).Info("Deleted user link")
+		h.urlChan <- store.URLPair{ShortURL: shortURL, UserID: userID}
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }

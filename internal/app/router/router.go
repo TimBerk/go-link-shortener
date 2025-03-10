@@ -11,14 +11,16 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Context) chi.Router {
-	handler := handler.NewHandler(dataStore, cfg, ctx)
+func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Context, urlChan chan store.URLPair) chi.Router {
+	handler := handler.NewHandler(dataStore, cfg, ctx, urlChan)
 
 	router := chi.NewRouter()
 	router.Use(logger.RequestLogger)
 	router.Use(compress.GzipMiddleware)
 
 	router.Get("/ping", handler.Ping)
+	router.Get("/api/user/urls", handler.UserURLsHandler)
+	router.Delete("/api/user/urls", handler.DeleteURLsHandler)
 	router.Post("/api/shorten/batch", handler.ShortenBatch)
 	router.Post("/api/shorten", handler.ShortenJSONURL)
 	router.Get("/{id}", handler.Redirect)
