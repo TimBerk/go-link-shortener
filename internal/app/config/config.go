@@ -2,6 +2,8 @@ package config
 
 import (
 	"flag"
+	"github.com/caarlos0/env/v11"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -13,11 +15,14 @@ type Config struct {
 	LogLevel        string
 	FileStoragePath string
 	UseLocalStore   bool `envconfig:"USE_LOCAL_STORE" default:"false"`
-	DatabaseDSN   string
+	DatabaseDSN     string
 }
 
 func InitConfig() *Config {
 	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		log.Fatal("Failed to parse config: ", err)
+	}
 
 	envServerAddress := os.Getenv("SERVER_ADDRESS")
 	envBaseURL := os.Getenv("BASE_URL")
@@ -66,6 +71,6 @@ func NewConfig(serverAddress, baseURL string, useLocalStore bool) *Config {
 	return &Config{
 		ServerAddress: serverAddress,
 		BaseURL:       baseURL,
-		UseLocalStore:       useLocalStore,
+		UseLocalStore: useLocalStore,
 	}
 }
