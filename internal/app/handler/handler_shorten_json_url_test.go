@@ -3,14 +3,16 @@ package handler
 import (
 	"bytes"
 	"context"
-	"github.com/TimBerk/go-link-shortener/internal/app/config"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
 func TestShortenJsonURLHandler(t *testing.T) {

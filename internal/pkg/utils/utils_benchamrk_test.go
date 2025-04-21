@@ -1,11 +1,12 @@
 package utils
 
 import (
-	"github.com/sirupsen/logrus"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 func BenchmarkCheckParamInHeaderParam(b *testing.B) {

@@ -3,14 +3,16 @@ package handler
 import (
 	"bytes"
 	"context"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/mailru/easyjson"
+	"github.com/stretchr/testify/mock"
+
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/TimBerk/go-link-shortener/internal/app/models/simple"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/mailru/easyjson"
-	"github.com/stretchr/testify/mock"
-	"net/http/httptest"
-	"testing"
 )
 
 func setupTestHandler(mockStore *MockURLStore) *Handler {

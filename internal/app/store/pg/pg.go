@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/TimBerk/go-link-shortener/internal/app/config"
-	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirupsen/logrus"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
 type PostgresStore struct {

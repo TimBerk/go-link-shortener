@@ -2,13 +2,14 @@ package handler
 
 import (
 	"context"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/TimBerk/go-link-shortener/internal/pkg/cookies"
 	"net/http"
 	"time"
 
-	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
+	"github.com/TimBerk/go-link-shortener/internal/pkg/cookies"
 )
 
 const (

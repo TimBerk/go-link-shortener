@@ -7,10 +7,11 @@ import (
 	"os"
 	"sync"
 
-	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+
+	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
 type JSONRecord struct {

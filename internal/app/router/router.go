@@ -2,13 +2,15 @@ package router
 
 import (
 	"context"
+	"net/http/pprof"
+
+	"github.com/go-chi/chi/v5"
+
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/handler"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/compress"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/go-chi/chi/v5"
-	"net/http/pprof"
 )
 
 func addPprof(router chi.Router) {

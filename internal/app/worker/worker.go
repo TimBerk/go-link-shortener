@@ -2,10 +2,12 @@ package worker
 
 import (
 	"context"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
 const (

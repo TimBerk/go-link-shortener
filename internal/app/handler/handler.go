@@ -9,17 +9,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/mailru/easyjson"
 	"github.com/sirupsen/logrus"
 
+	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/TimBerk/go-link-shortener/internal/app/models/simple"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/mailru/easyjson"
-
-	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/pkg/cookies"
 	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
-	"github.com/go-chi/chi/v5"
 )
 
 var userURLs = make(map[string][]map[string]string)
