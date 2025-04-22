@@ -1,3 +1,5 @@
+// Package compress выступает в роли обработчика запросов
+// для осуществления сжатия и декодирования контента для gzip
 package compress
 
 import (
@@ -9,11 +11,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// gzipWriter - параметры для записи контента в gzip-формате
 type gzipWriter struct {
 	w  http.ResponseWriter
 	zw *gzip.Writer
 }
 
+// gzipReader - параметры для чтения контента в gzip-формате
+type gzipReader struct {
+	r  io.ReadCloser
+	zr *gzip.Reader
+}
+
+// newCompressWriter - создание нового обработчика для записи контента в gzip-формате
 func newCompressWriter(w http.ResponseWriter) *gzipWriter {
 	return &gzipWriter{
 		w:  w,
@@ -21,14 +31,17 @@ func newCompressWriter(w http.ResponseWriter) *gzipWriter {
 	}
 }
 
+// Header - получение заголовка из обработчика записи
 func (c *gzipWriter) Header() http.Header {
 	return c.w.Header()
 }
 
+// Write - запись данных с помощью обработчика записи
 func (c *gzipWriter) Write(p []byte) (int, error) {
 	return c.zw.Write(p)
 }
 
+// WriteHeader - запись данных в заголовок с помощью обработчика записи
 func (c *gzipWriter) WriteHeader(statusCode int) {
 	if statusCode < 300 {
 		c.w.Header().Set("Content-Encoding", "gzip")
@@ -36,15 +49,12 @@ func (c *gzipWriter) WriteHeader(statusCode int) {
 	c.w.WriteHeader(statusCode)
 }
 
+// Close - закрытие обработчика записи
 func (c *gzipWriter) Close() error {
 	return c.zw.Close()
 }
 
-type gzipReader struct {
-	r  io.ReadCloser
-	zr *gzip.Reader
-}
-
+// newCompressReader - создание нового обработчика для чтения контента в gzip-формате
 func newCompressReader(r io.ReadCloser) (*gzipReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -57,10 +67,12 @@ func newCompressReader(r io.ReadCloser) (*gzipReader, error) {
 	}, nil
 }
 
+// Read - чтения данных из обработчика чтения
 func (c gzipReader) Read(p []byte) (n int, err error) {
 	return c.zr.Read(p)
 }
 
+// Close - закрытие обработчика чтения
 func (c *gzipReader) Close() error {
 	if err := c.r.Close(); err != nil {
 		return err
@@ -68,6 +80,9 @@ func (c *gzipReader) Close() error {
 	return c.zr.Close()
 }
 
+// GzipMiddleware - обработчик запросов для осуществления сжатия/декодирования контента
+// При наличии заголовка Accept-Encoding со значением gzip осуществляется сжатие данных
+// При наличии заголовка Content-Encoding со значением gzip осуществляется декодирование данных
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ow := w

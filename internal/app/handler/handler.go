@@ -1,3 +1,4 @@
+// Package handler обрабатывает данные для api-эндопоинтов.
 package handler
 
 import (
@@ -21,15 +22,10 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
 )
 
+// userURLs - локальный store для быстрого нахождения ссылок пользователя
 var userURLs = make(map[string][]map[string]string)
 
-func addShortURL(userID, shortURL, originalURL string) {
-	userURLs[userID] = append(userURLs[userID], map[string]string{
-		"short_url":    shortURL,
-		"original_url": originalURL,
-	})
-}
-
+// Handler - структура для хранения настроек и обработчиков данных
 type Handler struct {
 	store   store.Store
 	cfg     *config.Config
@@ -37,10 +33,41 @@ type Handler struct {
 	urlChan chan store.URLPair
 }
 
+// addShortURL - обработчик локального хранилища ссылок пользователя
+func addShortURL(userID, shortURL, originalURL string) {
+	userURLs[userID] = append(userURLs[userID], map[string]string{
+		"short_url":    shortURL,
+		"original_url": originalURL,
+	})
+}
+
+// NewHandler - инициализация нового обработчика на основании переаданных настроек
 func NewHandler(store store.Store, cfg *config.Config, ctx context.Context, urlChan chan store.URLPair) *Handler {
 	return &Handler{store: store, cfg: cfg, ctx: ctx, urlChan: urlChan}
 }
 
+// ErrorResponse стандартный формат ошибки API
+// swagger:model
+type ErrorResponse struct {
+	Error string `json:"error" example:"error message"`
+}
+
+// RequestJSON запрос на сокращение URL
+// swagger:model
+type RequestJSON struct {
+	URL string `json:"url" example:"https://example.com"`
+}
+
+// ShortenURL обрабатывает запрос на сокращение URL
+// @Summary Сократить URL (текстовый формат)
+// @Description Создает короткую версию переданного URL
+// @Accept  text/plain
+// @Produce text/plain
+// @Param   url body string true "Оригинальный URL"
+// @Success 201 {string} string "Сокращенный URL"
+// @Success 409 {string} string "URL уже существует"
+// @Failure 400 {string} string "Неверный запрос"
+// @Router / [post]
 func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -79,6 +106,16 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fullShortURL))
 }
 
+// ShortenJSONURL обрабатывает запрос на сокращение URL в JSON формате
+// @Summary Сократить URL (JSON формат)
+// @Description Создает короткую версию переданного URL
+// @Accept  json
+// @Produce json
+// @Param   request body simple.RequestJSON true "Запрос с URL"
+// @Success 201 {object} simple.ResponseJSON
+// @Success 409 {object} simple.ResponseJSON
+// @Failure 400 {object} ErrorResponse "Неверный запрос"
+// @Router /api/shorten [post]
 func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if !utils.CheckParamInHeaderParam(r, "Content-Type", "application/json") {
@@ -128,6 +165,14 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
+// Redirect выполняет перенаправление по короткому URL
+// @Summary Перенаправить по короткому URL
+// @Description Перенаправляет на оригинальный URL по короткому идентификатору
+// @Param   id path string true "Короткий идентификатор URL"
+// @Success 307 "Перенаправление на оригинальный URL"
+// @Failure 404 {string} string "URL не найден"
+// @Failure 410 {string} string "URL удален"
+// @Router /{id} [get]
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	userID, err := cookies.GetUserID(r)
 	if err != nil {
@@ -157,6 +202,12 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+// Ping проверяет соединение с базой данных
+// @Summary Проверить соединение с БД
+// @Description Проверяет доступность базы данных
+// @Success 200 "База данных доступна"
+// @Failure 500 {string} string "Ошибка соединения с БД"
+// @Router /ping [get]
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -171,6 +222,16 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// ShortenBatch обрабатывает пакетное создание коротких URL
+// @Summary Пакетное создание коротких URL
+// @Description Создает несколько коротких URL за один запрос
+// @Accept  json
+// @Produce json
+// @Param   urls body []batch.BatchRequest true "Массив URL для сокращения"
+// @Success 201 {array} batch.BatchResponse
+// @Failure 400 {object} ErrorResponse "Неверный запрос"
+// @Failure 500 {object} ErrorResponse "Ошибка сервера"
+// @Router /api/shorten/batch [post]
 func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	var batchRequests batch.BatchRequest
 
@@ -211,6 +272,13 @@ func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
+// UserURLsHandler возвращает все URL пользователя
+// @Summary Получить URL пользователя
+// @Description Возвращает все сокращенные URL текущего пользователя
+// @Produce json
+// @Success 200 {array} map[string]string "Массив URL пользователя"
+// @Success 204 "Нет сохраненных URL"
+// @Router /api/user/urls [get]
 func (h *Handler) UserURLsHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := cookies.GetUserID(r)
 	if err != nil {
@@ -228,6 +296,16 @@ func (h *Handler) UserURLsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(urls)
 }
 
+// DeleteURLsHandler помечает URL как удаленные
+// @Summary Удалить URL пользователя
+// @Description Помечает указанные URL как удаленные (асинхронно)
+// @Accept  json
+// @Produce json
+// @Param   urls body []string true "Массив коротких URL для удаления"
+// @Success 202 "Запрос принят в обработку"
+// @Failure 400 {object} ErrorResponse "Неверный запрос"
+// @Failure 401 {string} string "Пользователь не авторизован"
+// @Router /api/user/urls [delete]
 func (h *Handler) DeleteURLsHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := cookies.GetUserID(r)
 	if err != nil {

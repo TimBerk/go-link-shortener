@@ -1,3 +1,5 @@
+// Package config работает с настройками для проекта.
+// Осуществлена поддержка работы с переменными окружения и флагами.
 package config
 
 import (
@@ -10,6 +12,7 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
+// Config задает основные переменные окружения
 type Config struct {
 	ServerAddress   string
 	BaseURL         string
@@ -19,6 +22,7 @@ type Config struct {
 	DatabaseDSN     string
 }
 
+// InitConfig Инициализирует и устанавливает значения для переменных окружения
 func InitConfig() *Config {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
@@ -68,6 +72,7 @@ func InitConfig() *Config {
 	return cfg
 }
 
+// NewConfig Инициализирует минимальные настройки
 func NewConfig(serverAddress, baseURL string, useLocalStore bool) *Config {
 	return &Config{
 		ServerAddress: serverAddress,
