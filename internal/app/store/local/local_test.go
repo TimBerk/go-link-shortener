@@ -7,8 +7,9 @@ import (
 	"reflect"
 
 	"bou.ke/monkey"
-	base "github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/stretchr/testify/assert"
+
+	base "github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
 type MockGenerator struct{}
@@ -39,8 +40,8 @@ func TestAddURL(t *testing.T) {
 		{
 			name: "Add new value in Store",
 			store: &URLStore{
-				linksMap:    map[string]UserLink{"short1": UserLink{"test", "localhost:9090"}},
-				originalMap: map[string]UserLink{"localhost:9090": UserLink{"test", "short1"}},
+				linksMap:    map[string]UserLink{"short1": {"test", "localhost:9090"}},
+				originalMap: map[string]UserLink{"localhost:9090": {"test", "short1"}},
 				gen:         base.NewIDGenerator(),
 			},
 			originalURL: "localhost:8080",
@@ -49,8 +50,8 @@ func TestAddURL(t *testing.T) {
 		{
 			name: "Add exist value in Store",
 			store: &URLStore{
-				linksMap:    map[string]UserLink{"short2": UserLink{"test", "localhost:8080"}},
-				originalMap: map[string]UserLink{"localhost:8080": UserLink{"test", "short2"}},
+				linksMap:    map[string]UserLink{"short2": {"test", "localhost:8080"}},
+				originalMap: map[string]UserLink{"localhost:8080": {"test", "short2"}},
 				gen:         base.NewIDGenerator(),
 			},
 			originalURL: "localhost:8080",
@@ -109,8 +110,8 @@ func TestGetOriginalURL(t *testing.T) {
 		{
 			name: "Get exist value in Store",
 			store: &URLStore{
-				linksMap:    map[string]UserLink{"short1": UserLink{"test", "localhost:9090"}},
-				originalMap: map[string]UserLink{"localhost:9090": UserLink{"test", "short1"}},
+				linksMap:    map[string]UserLink{"short1": {"test", "localhost:9090"}},
+				originalMap: map[string]UserLink{"localhost:9090": {"test", "short1"}},
 				gen:         base.NewIDGenerator(),
 			},
 			shortURL:    "short1",
@@ -120,8 +121,8 @@ func TestGetOriginalURL(t *testing.T) {
 		{
 			name: "Get not exist value in Store",
 			store: &URLStore{
-				linksMap:    map[string]UserLink{"short2": UserLink{"test", "localhost:8080"}},
-				originalMap: map[string]UserLink{"localhost:8080": UserLink{"test", "short2"}},
+				linksMap:    map[string]UserLink{"short2": {"test", "localhost:8080"}},
+				originalMap: map[string]UserLink{"localhost:8080": {"test", "short2"}},
 				gen:         base.NewIDGenerator(),
 			},
 			shortURL:    "short1",

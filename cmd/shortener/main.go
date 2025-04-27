@@ -1,3 +1,4 @@
+// Package main отвечает за конфигурирование, запуск и работу приложения
 package main
 
 import (
@@ -13,7 +14,15 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/pg"
 	"github.com/TimBerk/go-link-shortener/internal/app/worker"
+	_ "github.com/TimBerk/go-link-shortener/swagger"
 )
+
+// @Title Shortener API
+// @Description Сервис сокращения URL
+// @Version 1.0
+
+// @BasePath /api/v1
+// @Host localhost:8080
 
 func main() {
 	ctx := context.Background()

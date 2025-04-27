@@ -2,13 +2,18 @@ package handler
 
 import (
 	"context"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/TimBerk/go-link-shortener/internal/pkg/cookies"
 	"net/http"
 	"time"
 
-	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
+	"github.com/TimBerk/go-link-shortener/internal/pkg/cookies"
+)
+
+const (
+	userID string = "777"
 )
 
 func mockCookie(userID string) *http.Cookie {
@@ -27,30 +32,26 @@ type MockURLStore struct {
 }
 
 func (m *MockURLStore) AddURL(ctx context.Context, originalURL string, userID string) (string, error) {
-	args := m.Called(originalURL, userID)
+	args := m.Called(ctx, originalURL, userID)
 	return args.String(0), nil
 }
 
 func (m *MockURLStore) AddURLs(ctx context.Context, urls batch.BatchRequest, userID string) (batch.BatchResponse, error) {
-	args := m.Called(urls)
-
-	var responses batch.BatchResponse
-	for i := 0; i < len(urls); i++ {
-		response, _ := args.Get(i).(batch.ItemResponse)
-		responses = append(responses, response)
-	}
-
-	return responses, nil
+	args := m.Called(ctx, urls, userID)
+	return args.Get(0).(batch.BatchResponse), args.Error(1)
 }
 
 func (m *MockURLStore) GetOriginalURL(ctx context.Context, shortURL string, userID string) (string, bool, bool) {
-	args := m.Called(shortURL, userID)
+	args := m.Called(ctx, shortURL, userID)
 	return args.String(0), args.Bool(1), false
 }
 
 func (m *MockURLStore) Ping(ctx context.Context) error {
-	return nil
+	args := m.Called(ctx)
+	return args.Error(0)
 }
+
 func (m *MockURLStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
-	return nil
+	args := m.Called(ctx, batch)
+	return args.Error(0)
 }

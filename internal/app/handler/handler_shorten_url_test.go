@@ -8,10 +8,12 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestShortenURL(t *testing.T) {
@@ -20,7 +22,6 @@ func TestShortenURL(t *testing.T) {
 	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
 	mockStore := new(MockURLStore)
 	testHandler := NewHandler(mockStore, mockConfig, ctx, urlChan)
-	userID := "test"
 	testCookie := mockCookie(userID)
 
 	tests := []struct {
@@ -57,7 +58,7 @@ func TestShortenURL(t *testing.T) {
 				if usedParam == "" {
 					usedParam = mockConfig.BaseURL
 				}
-				mockStore.On("AddURL", usedParam, userID).Return(test.mockReturnShortURL)
+				mockStore.On("AddURL", mock.Anything, usedParam, userID).Return(test.mockReturnShortURL)
 			}
 			req := httptest.NewRequest(test.method, "/shorten", bytes.NewBufferString(test.body))
 			req.Header.Set("Content-Type", test.contentType)
@@ -78,7 +79,6 @@ func TestAddURL_Concurrent(t *testing.T) {
 	var results []string
 	ctx := context.Background()
 	testGen := store.NewIDGenerator()
-	userID := "test"
 	testStore, _ := local.NewURLStore(testGen)
 	originalURL := "https://example.com"
 

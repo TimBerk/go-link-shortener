@@ -1,3 +1,4 @@
+// Package local предназначен для организации хранения данных в оперативной памяти
 package local
 
 import (
@@ -8,11 +9,13 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
+// UserLink описывает структуру записи
 type UserLink struct {
 	UserID string
 	Link   string
 }
 
+// URLStore описывает структуру локального стора
 type URLStore struct {
 	linksMap    map[string]UserLink
 	originalMap map[string]UserLink
@@ -21,6 +24,7 @@ type URLStore struct {
 	mutex       sync.Mutex
 }
 
+// NewURLStore на основании переданного генератора создает новый стор
 func NewURLStore(gen store.Generator) (*URLStore, error) {
 	return &URLStore{
 		linksMap:    make(map[string]UserLink),
@@ -30,6 +34,7 @@ func NewURLStore(gen store.Generator) (*URLStore, error) {
 	}, nil
 }
 
+// AddURL осуществляет добавление с генерацией короткой ссылки для пользователя
 func (s *URLStore) AddURL(ctx context.Context, originalURL string, userID string) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -49,6 +54,7 @@ func (s *URLStore) AddURL(ctx context.Context, originalURL string, userID string
 	return shortURL, nil
 }
 
+// AddURLs осуществляет добавление с генерацией коротких ссылок для пользователя
 func (s *URLStore) AddURLs(ctx context.Context, urls models.BatchRequest, userID string) (models.BatchResponse, error) {
 	var responses models.BatchResponse
 
@@ -77,15 +83,18 @@ func (s *URLStore) AddURLs(ctx context.Context, urls models.BatchRequest, userID
 	return responses, nil
 }
 
+// GetOriginalURL осуществляет поиск оригинальной ссылки по переданной короткой
 func (s *URLStore) GetOriginalURL(ctx context.Context, shortURL string, userID string) (string, bool, bool) {
 	userLink, exists := s.linksMap[shortURL]
 	return userLink.Link, exists, false
 }
 
+// Ping эмулирует проверку доступности стора
 func (s *URLStore) Ping(ctx context.Context) error {
 	return nil
 }
 
+// DeleteURL удаляет ссылки пользователя
 func (s *URLStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
 	if len(batch) == 0 {
 		return nil

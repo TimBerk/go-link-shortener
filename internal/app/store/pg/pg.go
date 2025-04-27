@@ -1,3 +1,4 @@
+// Package pg предназначен для организации хранения данных в PostgreSQL
 package pg
 
 import (
@@ -6,20 +7,23 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/TimBerk/go-link-shortener/internal/app/config"
-	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirupsen/logrus"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
+// PostgresStore описывает структуру стора
 type PostgresStore struct {
 	db  *pgxpool.Pool
 	gen store.Generator
 	cfg *config.Config
 }
 
+// PgRecord описывает структуру записи
 type PgRecord struct {
 	ID          string
 	OriginalURL string
@@ -28,6 +32,7 @@ type PgRecord struct {
 	IsDeleted   bool
 }
 
+// NewPgPool создает новый пул для подключений
 func NewPgPool(ctx context.Context, connString string) (*PostgresStore, error) {
 	var pgInstance *PostgresStore
 	var pgOnce sync.Once
@@ -53,6 +58,7 @@ func NewPgPool(ctx context.Context, connString string) (*PostgresStore, error) {
 	return pgInstance, nil
 }
 
+// NewPgStore создает новый стор
 func NewPgStore(gen store.Generator, cfg *config.Config) (*PostgresStore, error) {
 	ctx := context.Background()
 
@@ -68,6 +74,7 @@ func NewPgStore(gen store.Generator, cfg *config.Config) (*PostgresStore, error)
 	return pgStore, nil
 }
 
+// Ping проверяет доступность БД
 func (pg *PostgresStore) Ping(ctx context.Context) error {
 	connection, err := pgx.Connect(ctx, pg.cfg.DatabaseDSN)
 	if err != nil {
@@ -83,10 +90,12 @@ func (pg *PostgresStore) Ping(ctx context.Context) error {
 	return err
 }
 
+// Close закрывает соединение к БД
 func (pg *PostgresStore) Close() {
 	pg.db.Close()
 }
 
+// createTable создает таблицу ссылок, если она отсутствует в БД
 func (pg *PostgresStore) createTable(ctx context.Context) error {
 	query := `
     CREATE TABLE IF NOT EXISTS short_urls (
@@ -100,6 +109,7 @@ func (pg *PostgresStore) createTable(ctx context.Context) error {
 	return err
 }
 
+// getRecordByOriginalURL получает запись из БД по оригинальной ссылке
 func (pg *PostgresStore) getRecordByOriginalURL(ctx context.Context, originalURL string, userID string) (PgRecord, error) {
 	var record PgRecord
 	query := `SELECT * FROM short_urls WHERE original_url = $1`
@@ -107,6 +117,7 @@ func (pg *PostgresStore) getRecordByOriginalURL(ctx context.Context, originalURL
 	return record, err
 }
 
+// getRecordByShortURL получает запись из БД по короткой ссылке
 func (pg *PostgresStore) getRecordByShortURL(ctx context.Context, shortURL string, userID string) (PgRecord, error) {
 	var record PgRecord
 	query := `SELECT * FROM short_urls WHERE short_url = $1`
@@ -114,14 +125,16 @@ func (pg *PostgresStore) getRecordByShortURL(ctx context.Context, shortURL strin
 	return record, err
 }
 
+// insertRecord добавляет новую запись в БД
 func (pg *PostgresStore) insertRecord(ctx context.Context, originalURL, shortURL string, userID string) error {
 	query := `INSERT INTO short_urls (original_url, short_url, user_id) VALUES ($1, $2, $3)`
 	_, err := pg.db.Exec(ctx, query, originalURL, shortURL, userID)
 	return err
 }
 
+// AddURL добавляет новую ссылку в БД, если она отсутствует. Иначе возвращает существующую.
 func (pg *PostgresStore) AddURL(ctx context.Context, originalURL string, userID string) (string, error) {
-	logrus.WithField("uri", originalURL).Error("Search short URL")
+	logrus.WithField("uri", originalURL).Info("Search short URL")
 	record, err := pg.getRecordByOriginalURL(ctx, originalURL, userID)
 	logrus.WithFields(logrus.Fields{
 		"originalURL": originalURL,
@@ -171,6 +184,7 @@ func (pg *PostgresStore) AddURL(ctx context.Context, originalURL string, userID 
 	return shortURL, nil
 }
 
+// AddURLs добавляет новые ссылки в БД, если они отсутствуют.
 func (pg *PostgresStore) AddURLs(ctx context.Context, urls models.BatchRequest, userID string) (models.BatchResponse, error) {
 	var responses models.BatchResponse
 
@@ -240,6 +254,7 @@ func (pg *PostgresStore) AddURLs(ctx context.Context, urls models.BatchRequest, 
 	return responses, nil
 }
 
+// GetOriginalURL получает ориганальную ссылку по короткой.
 func (pg *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string, userID string) (string, bool, bool) {
 	logrus.WithField("uri", shortURL).Error("Search origin URL")
 	record, err := pg.getRecordByShortURL(ctx, shortURL, userID)
@@ -254,6 +269,7 @@ func (pg *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string, us
 	return "", false, false
 }
 
+// DeleteURL удаляет ссылку.
 func (pg *PostgresStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
 	if len(batch) == 0 {
 		return nil

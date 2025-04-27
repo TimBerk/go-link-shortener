@@ -1,3 +1,4 @@
+// Package cookies обрабатывает cookie запросов для приложения
 package cookies
 
 import (
@@ -10,17 +11,22 @@ import (
 )
 
 var (
-	hashKey  = securecookie.GenerateRandomKey(64)
+	// hash ключ для работы с cookie
+	hashKey = securecookie.GenerateRandomKey(64)
+	// blockKey - дополнительный ключ для шифрования cookie
 	blockKey = securecookie.GenerateRandomKey(32)
-	s        = securecookie.New(hashKey, blockKey)
+	// s - SecureCookie для работы с пользовательскими cookie в приложении
+	s = securecookie.New(hashKey, blockKey)
 )
 
+// GenerateUserID генерирует значение для ID пользователя
 func GenerateUserID() string {
 	b := make([]byte, 16)
 	rand.Read(b)
 	return base64.URLEncoding.EncodeToString(b)
 }
 
+// GetEncodedValue кодирует значение ID пользователя в securecookie
 func GetEncodedValue(userID string) (string, error) {
 	value := map[string]string{
 		"user_id": userID,
@@ -28,6 +34,7 @@ func GetEncodedValue(userID string) (string, error) {
 	return s.Encode("user", value)
 }
 
+// SetUserCookie устанавливает значение ID пользователя в securecookie
 func SetUserCookie(w http.ResponseWriter, userID string) {
 	encoded, err := GetEncodedValue(userID)
 	if err == nil {
@@ -42,6 +49,7 @@ func SetUserCookie(w http.ResponseWriter, userID string) {
 	}
 }
 
+// GetUserID получает значение ID пользователя из securecookie
 func GetUserID(r *http.Request) (string, error) {
 	if cookie, err := r.Cookie("user"); err == nil {
 		value := make(map[string]string)

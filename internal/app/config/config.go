@@ -1,23 +1,33 @@
+// Package config работает с настройками для проекта.
+// Осуществлена поддержка работы с переменными окружения и флагами.
 package config
 
 import (
 	"flag"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/caarlos0/env/v11"
 )
 
+// Config задает основные переменные окружения
 type Config struct {
 	ServerAddress   string
 	BaseURL         string
 	LogLevel        string
 	FileStoragePath string
 	UseLocalStore   bool `envconfig:"USE_LOCAL_STORE" default:"false"`
-	DatabaseDSN   string
+	DatabaseDSN     string
 }
 
+// InitConfig Инициализирует и устанавливает значения для переменных окружения
 func InitConfig() *Config {
 	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		log.Fatal("Failed to parse config: ", err)
+	}
 
 	envServerAddress := os.Getenv("SERVER_ADDRESS")
 	envBaseURL := os.Getenv("BASE_URL")
@@ -62,10 +72,11 @@ func InitConfig() *Config {
 	return cfg
 }
 
+// NewConfig Инициализирует минимальные настройки
 func NewConfig(serverAddress, baseURL string, useLocalStore bool) *Config {
 	return &Config{
 		ServerAddress: serverAddress,
 		BaseURL:       baseURL,
-		UseLocalStore:       useLocalStore,
+		UseLocalStore: useLocalStore,
 	}
 }

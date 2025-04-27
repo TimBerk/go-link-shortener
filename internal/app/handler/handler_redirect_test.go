@@ -2,15 +2,16 @@ package handler
 
 import (
 	"context"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/models/batch"
-	"github.com/stretchr/testify/assert"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
 type MockStore struct {

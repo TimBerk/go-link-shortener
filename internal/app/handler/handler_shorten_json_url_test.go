@@ -3,13 +3,16 @@ package handler
 import (
 	"bytes"
 	"context"
-	"github.com/TimBerk/go-link-shortener/internal/app/config"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
 func TestShortenJsonURLHandler(t *testing.T) {
@@ -18,7 +21,6 @@ func TestShortenJsonURLHandler(t *testing.T) {
 	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
 	mockStore := new(MockURLStore)
 	testHandler := NewHandler(mockStore, mockConfig, ctx, urlChan)
-	userID := "test"
 	testCookie := mockCookie(userID)
 
 	tests := []struct {
@@ -61,7 +63,7 @@ func TestShortenJsonURLHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.mockReturnShortURL != "" {
-				mockStore.On("AddURL", test.bodyURL, userID).Return(test.mockReturnShortURL)
+				mockStore.On("AddURL", mock.Anything, test.bodyURL, userID).Return(test.mockReturnShortURL)
 			}
 			req := httptest.NewRequest(test.method, "/api/shorten", bytes.NewBufferString(test.body))
 			req.Header.Set("Content-Type", test.contentType)

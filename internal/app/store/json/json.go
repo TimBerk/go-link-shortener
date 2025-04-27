@@ -1,3 +1,4 @@
+// Package json предназначен для организации хранения данных в JSON-файле
 package json
 
 import (
@@ -7,12 +8,14 @@ import (
 	"os"
 	"sync"
 
-	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
-	"github.com/TimBerk/go-link-shortener/internal/app/store"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+
+	models "github.com/TimBerk/go-link-shortener/internal/app/models/batch"
+	"github.com/TimBerk/go-link-shortener/internal/app/store"
 )
 
+// JSONRecord описывает структуру JSON-записи
 type JSONRecord struct {
 	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
@@ -20,6 +23,7 @@ type JSONRecord struct {
 	UserID      string `json:"user_id"`
 }
 
+// JSONStore описывает структуру JSON-стора
 type JSONStore struct {
 	storage     map[string]JSONRecord
 	fullStorage map[string]JSONRecord
@@ -28,6 +32,7 @@ type JSONStore struct {
 	mutex       sync.Mutex
 }
 
+// NewJSONStore на основании переданного пути и генератора создает новый JSON-стор
 func NewJSONStore(filePath string, gen store.Generator) (*JSONStore, error) {
 	store := &JSONStore{
 		storage:     make(map[string]JSONRecord),
@@ -44,6 +49,7 @@ func NewJSONStore(filePath string, gen store.Generator) (*JSONStore, error) {
 	return store, nil
 }
 
+// loadStorage осуществляет загрузку и декодирование записей из файла
 func (s *JSONStore) loadStorage() error {
 	file, err := os.Open(s.filePath)
 	if err != nil {
@@ -65,6 +71,7 @@ func (s *JSONStore) loadStorage() error {
 	return nil
 }
 
+// saveStorage осуществляет сохранение записей в файл
 func (s *JSONStore) saveStorage() error {
 	file, err := os.Create(s.filePath)
 	if err != nil {
@@ -81,6 +88,7 @@ func (s *JSONStore) saveStorage() error {
 	return nil
 }
 
+// AddURL осуществляет добавление с генерацией короткой ссылки для пользователя
 func (s *JSONStore) AddURL(ctx context.Context, originalURL string, userID string) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -115,6 +123,7 @@ func (s *JSONStore) AddURL(ctx context.Context, originalURL string, userID strin
 	return shortURL, nil
 }
 
+// AddURLs осуществляет добавление с генерацией коротких ссылок для пользователя
 func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest, userID string) (models.BatchResponse, error) {
 	var responses models.BatchResponse
 
@@ -148,15 +157,18 @@ func (s *JSONStore) AddURLs(ctx context.Context, urls models.BatchRequest, userI
 	return responses, nil
 }
 
+// GetOriginalURL осуществляет поиск оригинальной ссылки по переданной короткой
 func (s *JSONStore) GetOriginalURL(ctx context.Context, shortURL string, userID string) (string, bool, bool) {
 	record, exists := s.storage[shortURL]
 	return record.OriginalURL, exists, false
 }
 
+// Ping эмулирует проверку доступности стора
 func (s *JSONStore) Ping(ctx context.Context) error {
 	return nil
 }
 
+// DeleteURL удаляет ссылки пользователя
 func (s *JSONStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
 	if len(batch) == 0 {
 		return nil

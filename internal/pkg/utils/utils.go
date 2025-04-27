@@ -1,3 +1,4 @@
+// Package utils предоставляет дополнительные функции для упрощения работы с кодом
 package utils
 
 import (
@@ -8,10 +9,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// JSONErrorResponse - параметры для ответа с ошибкой в формате JSON
 type JSONErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// CheckParamInHeaderParam - проверяет есть ли переданный параметр в указанном заголовке
 func CheckParamInHeaderParam(r *http.Request, headerParam string, needParam string) bool {
 	headerValue := r.Header.Get(headerParam)
 	if headerValue == "" {
@@ -37,6 +40,7 @@ func CheckParamInHeaderParam(r *http.Request, headerParam string, needParam stri
 	return false
 }
 
+// WriteJSONError - формирует ответ с ошибкой в формате JSON
 func WriteJSONError(w http.ResponseWriter, message string, statusCode int) {
 	w.WriteHeader(statusCode)
 	errorResponse := JSONErrorResponse{

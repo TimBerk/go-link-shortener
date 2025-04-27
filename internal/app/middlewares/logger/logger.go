@@ -1,3 +1,4 @@
+// Package logger обрабатывает логи для приложения
 package logger
 
 import (
@@ -8,29 +9,35 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Log - сущность логгера
 var Log *logrus.Logger = logrus.New()
 
+// gzipWriter - параметры для работы с логгами
 type responseLogger struct {
 	w      http.ResponseWriter
 	status int
 	size   int
 }
 
+// WriteHeader - запись данных в заголовок с помощью обработчика записи
 func (rl *responseLogger) WriteHeader(statusCode int) {
 	rl.status = statusCode
 	rl.w.WriteHeader(statusCode)
 }
 
+// Write - запись данных с помощью обработчика
 func (rl *responseLogger) Write(b []byte) (int, error) {
 	size, err := rl.w.Write(b)
 	rl.size += size
 	return size, err
 }
 
+// Header - получение заголовка из обработчика записи
 func (rl *responseLogger) Header() http.Header {
 	return rl.w.Header()
 }
 
+// Initialize Инициализирует и устанавливает значения для логгов
 func Initialize(level string) error {
 	logLevel, err := logrus.ParseLevel(level)
 	if err != nil {
@@ -43,6 +50,7 @@ func Initialize(level string) error {
 	return nil
 }
 
+// RequestLogger - обработчик, добавлеяющий логирование для входящих/выохдящих запросов
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
