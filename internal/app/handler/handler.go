@@ -103,7 +103,10 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusConflict)
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(fullShortURL))
+	_, errResponse := w.Write([]byte(fullShortURL))
+	if errResponse != nil {
+		logrus.WithField("err", errResponse).Error("Failed to response shorten url")
+	}
 }
 
 // ShortenJSONURL обрабатывает запрос на сокращение URL в JSON формате
@@ -162,7 +165,10 @@ func (h *Handler) ShortenJSONURL(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusConflict)
 	}
-	w.Write(response)
+	_, errResponse := w.Write(response)
+	if errResponse != nil {
+		logrus.WithField("err", errResponse).Error("Failed to response shorten JSON url")
+	}
 }
 
 // Redirect выполняет перенаправление по короткому URL
@@ -246,7 +252,7 @@ func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+	defer utils.CloseWithLog(r.Body, "Error closing request body for shorten batch")
 
 	if len(batchRequests) == 0 {
 		http.Error(w, "Empty batch", http.StatusBadRequest)
@@ -269,7 +275,10 @@ func (h *Handler) ShortenBatch(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(response)
+	_, errResponse := w.Write(response)
+	if errResponse != nil {
+		logrus.WithField("err", errResponse).Error("Failed to response shorten batch")
+	}
 }
 
 // UserURLsHandler возвращает все URL пользователя
@@ -293,7 +302,10 @@ func (h *Handler) UserURLsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(urls)
+	errResponse := json.NewEncoder(w).Encode(urls)
+	if errResponse != nil {
+		logrus.WithField("err", errResponse).Error("Failed to response user URLs")
+	}
 }
 
 // DeleteURLsHandler помечает URL как удаленные

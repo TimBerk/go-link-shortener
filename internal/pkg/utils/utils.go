@@ -3,7 +3,9 @@ package utils
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -42,6 +44,7 @@ func CheckParamInHeaderParam(r *http.Request, headerParam string, needParam stri
 
 // WriteJSONError - формирует ответ с ошибкой в формате JSON
 func WriteJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	errorResponse := JSONErrorResponse{
 		Error: message,
@@ -55,5 +58,36 @@ func WriteJSONError(w http.ResponseWriter, message string, statusCode int) {
 
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
-	encoder.Encode(errorResponse)
+	err := encoder.Encode(errorResponse)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"header":     w.Header(),
+			"message":    message,
+			"statusCode": statusCode,
+		}).Error("Error creation response")
+	}
+}
+
+// CloseWithLog - обеспечивает закрытие сущности с логированием ошибки
+func CloseWithLog(closer io.Closer, message string) {
+	if err := closer.Close(); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"message": message,
+			"error":   err,
+		}).Error("Error closing")
+	}
+}
+
+// SetENVWithLog - обеспечивает установку env-значения с логированием ошибки
+func SetENVWithLog(key, value string) {
+	if err := os.Setenv(key, value); err != nil {
+		logrus.WithFields(logrus.Fields{"key": key, "value": value}).Error("Error set variable")
+	}
+}
+
+// UnsetENVWithLog - обеспечивает удаление env-значения с логированием ошибки
+func UnsetENVWithLog(key string) {
+	if err := os.Unsetenv(key); err != nil {
+		logrus.WithFields(logrus.Fields{"key": key}).Error("Error unset variable")
+	}
 }

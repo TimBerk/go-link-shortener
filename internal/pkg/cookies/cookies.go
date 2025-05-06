@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gorilla/securecookie"
 )
 
@@ -22,7 +24,10 @@ var (
 // GenerateUserID генерирует значение для ID пользователя
 func GenerateUserID() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		logrus.Error("UserID for session did not generate")
+		return ""
+	}
 	return base64.URLEncoding.EncodeToString(b)
 }
 

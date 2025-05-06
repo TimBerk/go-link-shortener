@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -90,7 +92,7 @@ func GzipMiddleware(next http.Handler) http.Handler {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			cw := newCompressWriter(w)
 			ow = cw
-			defer cw.Close()
+			defer utils.CloseWithLog(cw, "Error closing CompressWriter")
 		}
 
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
@@ -104,7 +106,7 @@ func GzipMiddleware(next http.Handler) http.Handler {
 				return
 			}
 			r.Body = cr
-			defer cr.Close()
+			defer utils.CloseWithLog(cr, "Error closing CompressReader")
 		}
 
 		next.ServeHTTP(ow, r)
