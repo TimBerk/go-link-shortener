@@ -3,7 +3,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
@@ -17,6 +19,22 @@ import (
 	_ "github.com/TimBerk/go-link-shortener/swagger"
 )
 
+var (
+	// buildVersion - версия сборки
+	buildVersion string = "N/A"
+	// buildDate - дата сборки
+	buildDate string = "N/A"
+	// buildCommit - коммит сборки
+	buildCommit string = "N/A"
+)
+
+// printBuildInfo - выводит информацию о сборке
+func printBuildInfo() {
+	fmt.Fprintf(os.Stdout, "Build version: %s\n", buildVersion)
+	fmt.Fprintf(os.Stdout, "Build date: %s\n", buildDate)
+	fmt.Fprintf(os.Stdout, "Build commit: %s\n", buildCommit)
+}
+
 // @Title Shortener API
 // @Description Сервис сокращения URL
 // @Version 1.0
@@ -25,6 +43,8 @@ import (
 // @Host localhost:8080
 
 func main() {
+	printBuildInfo()
+
 	ctx := context.Background()
 	cfg := config.InitConfig()
 
