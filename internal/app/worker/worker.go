@@ -65,5 +65,8 @@ func flushBatch(ctx context.Context, batch []store.URLPair, dataStore store.Stor
 
 	logrus.WithField("count", len(batch)).Info("Flush batch URLs")
 
-	dataStore.DeleteURL(ctx, batch)
+	errDelete := dataStore.DeleteURL(ctx, batch)
+	if errDelete != nil {
+		logrus.WithField("error", errDelete).Error("Failed to delete urls")
+	}
 }

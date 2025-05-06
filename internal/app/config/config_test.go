@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,8 +63,8 @@ func TestInitConfig(t *testing.T) {
 			flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
 			os.Args = []string{"cmd"}
 
-			os.Setenv("SERVER_ADDRESS", test.envServerAddr)
-			os.Setenv("BASE_URL", test.envBaseURL)
+			utils.SetENVWithLog("SERVER_ADDRESS", test.envServerAddr)
+			utils.SetENVWithLog("BASE_URL", test.envBaseURL)
 
 			if test.flagServerAddr != "" {
 				os.Args = append(os.Args, "-a", test.flagServerAddr)
@@ -76,8 +78,8 @@ func TestInitConfig(t *testing.T) {
 			assert.Equal(t, test.expectedAddr, cfg.ServerAddress, "Неверный адрес сервера")
 			assert.Equal(t, test.expectedBase, cfg.BaseURL, "Неверный базовый URL")
 
-			os.Unsetenv("SERVER_ADDRESS")
-			os.Unsetenv("BASE_URL")
+			utils.UnsetENVWithLog("SERVER_ADDRESS")
+			utils.UnsetENVWithLog("BASE_URL")
 		})
 	}
 }

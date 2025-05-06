@@ -27,7 +27,12 @@ import (
 func main() {
 	ctx := context.Background()
 	cfg := config.InitConfig()
-	logger.Initialize(cfg.LogLevel)
+
+	errLogs := logger.Initialize(cfg.LogLevel)
+	if errLogs != nil {
+		logger.Log.Fatal("Error initializing logs: ", errLogs)
+	}
+
 	generator := store.NewIDGenerator()
 	urlChan := make(chan store.URLPair, 1000)
 
