@@ -28,9 +28,6 @@ vendor/
 # HTTP-client files
 *.http
 
-# Makefile
-Makefile
-
 # Files
 files/*
 !files/.gitkeep
