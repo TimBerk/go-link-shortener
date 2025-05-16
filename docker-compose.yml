@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16.3
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U shortener' ]
+      interval: 10s
+      start_period: 40s
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shortener}
+      POSTGRES_USER: ${POSTGRES_USER:-shortener}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shortener}
+      PGTZ: ${TIME_ZONE:-Europe/Moscow}
+    volumes:
+      - db:/var/lib/postgresql/data:rw
+    ports:
+      - '5432:5432'
+
+volumes:
+  db: { }

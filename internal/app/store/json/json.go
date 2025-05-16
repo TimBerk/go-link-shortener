@@ -8,6 +8,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/TimBerk/go-link-shortener/internal/pkg/utils"
+
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
@@ -58,7 +60,7 @@ func (s *JSONStore) loadStorage() error {
 		}
 		return err
 	}
-	defer file.Close()
+	defer utils.CloseWithLog(file, "Error closing JSON-file")
 
 	decoder := json.NewDecoder(file)
 	for decoder.More() {
@@ -77,7 +79,7 @@ func (s *JSONStore) saveStorage() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer utils.CloseWithLog(file, "Error closing JSON-file")
 
 	encoder := json.NewEncoder(file)
 	for _, entry := range s.storage {

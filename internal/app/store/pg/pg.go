@@ -3,6 +3,7 @@ package pg
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"sync"
@@ -69,7 +70,10 @@ func NewPgStore(gen store.Generator, cfg *config.Config) (*PostgresStore, error)
 
 	pgStore.gen = gen
 	pgStore.cfg = cfg
-	pgStore.createTable(ctx)
+	errCreate := pgStore.createTable(ctx)
+	if errCreate != nil {
+		return pgStore, err
+	}
 
 	return pgStore, nil
 }
@@ -81,7 +85,11 @@ func (pg *PostgresStore) Ping(ctx context.Context) error {
 		logrus.WithFields(logrus.Fields{"err": err}).Error("unable to create connection")
 		return err
 	}
-	defer connection.Close(ctx)
+	defer func() {
+		if errClose := connection.Close(ctx); errClose != nil {
+			logrus.WithFields(logrus.Fields{"err": err}).Error("connection close error")
+		}
+	}()
 
 	err = connection.Ping(ctx)
 	if err != nil {
@@ -193,7 +201,11 @@ func (pg *PostgresStore) AddURLs(ctx context.Context, urls models.BatchRequest, 
 		logrus.WithField("err", err).Error("Error starting transaction")
 		return nil, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if errRollBack := tx.Rollback(ctx); errRollBack != nil && !errors.Is(errRollBack, sql.ErrTxDone) {
+			logrus.WithField("err", errRollBack).Error("Failed to rollback transaction")
+		}
+	}()
 
 	query := `INSERT INTO short_urls (ID, original_url, short_url, user_id) VALUES ($1, $2, $3, $4) ON CONFLICT (short_url) DO NOTHING`
 	stmt, err := tx.Prepare(ctx, "insert-tx-stmt", query)
