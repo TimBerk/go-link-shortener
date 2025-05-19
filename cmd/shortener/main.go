@@ -8,6 +8,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
 	"github.com/TimBerk/go-link-shortener/internal/app/router"
@@ -76,10 +78,28 @@ func main() {
 	go worker.Worker(ctx, dataStore, urlChan, &wg)
 
 	router := router.RegisterRouters(dataStore, cfg, ctx, urlChan)
-	logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
-	err := http.ListenAndServe(cfg.ServerAddress, router)
-	if err != nil {
-		logger.Log.Fatal("ListenAndServe: ", err)
+	logger.Log.WithFields(logrus.Fields{
+		"address": cfg.ServerAddress,
+		"cfg":     cfg,
+	}).Info("Starting server")
+	var errRun error
+	if !cfg.EnableHTTPS {
+		errRun = http.ListenAndServe(cfg.ServerAddress, router)
+	} else {
+		certFile := "cert.pem"
+		if _, err := os.Stat(certFile); os.IsNotExist(err) {
+			logger.Log.WithField("file", certFile).Fatal("Certificate file is not found", err)
+		}
+
+		keyFile := "key.pem"
+		if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+			logger.Log.WithField("file", keyFile).Fatal("Key file is not found", err)
+		}
+
+		errRun = http.ListenAndServeTLS(cfg.ServerAddress, certFile, keyFile, router)
+	}
+	if errRun != nil {
+		logger.Log.Fatal("ListenAndServe: ", errRun)
 	}
 
 	// Закрываем канал и ждем завершения воркера
