@@ -77,6 +77,7 @@ func TestInitConfig(t *testing.T) {
 
 			assert.Equal(t, test.expectedAddr, cfg.ServerAddress, "Неверный адрес сервера")
 			assert.Equal(t, test.expectedBase, cfg.BaseURL, "Неверный базовый URL")
+			assert.Equal(t, false, cfg.EnableHTTPS, "Неверный протокол для запуска")
 
 			utils.UnsetENVWithLog("SERVER_ADDRESS")
 			utils.UnsetENVWithLog("BASE_URL")

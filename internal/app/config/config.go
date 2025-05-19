@@ -20,6 +20,7 @@ type Config struct {
 	FileStoragePath string
 	UseLocalStore   bool `envconfig:"USE_LOCAL_STORE" default:"false"`
 	DatabaseDSN     string
+	EnableHTTPS     bool `envconfig:"ENABLE_HTTPS" default:"false"`
 }
 
 // InitConfig Инициализирует и устанавливает значения для переменных окружения
@@ -35,6 +36,7 @@ func InitConfig() *Config {
 	envFileStoragePath := os.Getenv("FILE_STORAGE_PATH")
 	envUseLocalStore := os.Getenv("USE_LOCAL_STORE")
 	envDatabaseDSN := os.Getenv("DATABASE_DSN")
+	envEnableHTTPS := os.Getenv("ENABLE_HTTPS")
 
 	flag.StringVar(&cfg.ServerAddress, "a", "localhost:8080", "HTTP server address")
 	flag.StringVar(&cfg.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
@@ -42,6 +44,7 @@ func InitConfig() *Config {
 	flag.StringVar(&cfg.FileStoragePath, "p", "files/data.json", "Path for files")
 	flag.BoolVar(&cfg.UseLocalStore, "local", false, "Use local store for url links")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "", "Database DSN for PostgreSQL")
+	flag.BoolVar(&cfg.EnableHTTPS, "s", false, "Enable HTTPS server")
 
 	flag.Parse()
 
@@ -68,6 +71,14 @@ func InitConfig() *Config {
 	if envDatabaseDSN != "" {
 		cfg.DatabaseDSN = envDatabaseDSN
 	}
+	if envEnableHTTPS != "" {
+		boolVar, err := strconv.ParseBool(strings.ToLower(envEnableHTTPS))
+		if err != nil {
+			boolVar = false
+		}
+
+		cfg.EnableHTTPS = boolVar
+	}
 
 	return cfg
 }
@@ -78,5 +89,6 @@ func NewConfig(serverAddress, baseURL string, useLocalStore bool) *Config {
 		ServerAddress: serverAddress,
 		BaseURL:       baseURL,
 		UseLocalStore: useLocalStore,
+		EnableHTTPS:   false,
 	}
 }
