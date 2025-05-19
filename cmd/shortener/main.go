@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,7 +16,7 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/app/store/json"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/pg"
-	"github.com/TimBerk/go-link-shortener/internal/app/worker"
+	"github.com/TimBerk/go-link-shortener/internal/app/workers"
 	_ "github.com/TimBerk/go-link-shortener/swagger"
 )
 
@@ -45,8 +46,9 @@ func printBuildInfo() {
 func main() {
 	printBuildInfo()
 
-	ctx := context.Background()
 	cfg := config.InitConfig()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	errLogs := logger.Initialize(cfg.LogLevel)
 	if errLogs != nil {
@@ -55,6 +57,7 @@ func main() {
 
 	generator := store.NewIDGenerator()
 	urlChan := make(chan store.URLPair, 1000)
+	signalChan := make(chan os.Signal, 1)
 
 	var dataStore store.Store
 	var errStore error
@@ -73,16 +76,50 @@ func main() {
 	// Запускаем воркер
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go worker.Worker(ctx, dataStore, urlChan, &wg)
+	go workers.Worker(ctx, dataStore, urlChan, &wg)
+
+	// Запускаем воркер для сигналов
+	wg.Add(1)
+	go workers.SignalWorker(ctx, cancel, signalChan, &wg)
 
 	router := router.RegisterRouters(dataStore, cfg, ctx, urlChan)
-	logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
-	err := http.ListenAndServe(cfg.ServerAddress, router)
-	if err != nil {
-		logger.Log.Fatal("ListenAndServe: ", err)
-	}
 
-	// Закрываем канал и ждем завершения воркера
-	close(urlChan)
-	wg.Wait()
+	serverErrChan := make(chan error, 1)
+	go func() {
+		logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
+		var errRun error
+		if !cfg.EnableHTTPS {
+			errRun = http.ListenAndServe(cfg.ServerAddress, router)
+		} else {
+			certFile := "cert.pem"
+			if _, err := os.Stat(certFile); os.IsNotExist(err) {
+				logger.Log.WithField("file", certFile).Fatal("Certificate file is not found", err)
+			}
+
+			keyFile := "key.pem"
+			if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+				logger.Log.WithField("file", keyFile).Fatal("Key file is not found", err)
+			}
+
+			errRun = http.ListenAndServeTLS(cfg.ServerAddress, certFile, keyFile, router)
+		}
+
+		if errRun != nil && !errors.Is(errRun, http.ErrServerClosed) {
+			serverErrChan <- errRun
+		}
+	}()
+
+	// Основной цикл обработки
+	select {
+	case err := <-serverErrChan:
+		logger.Log.Fatalf("Server error: %v", err)
+	case <-ctx.Done():
+		logger.Log.Info("Shutdown initiated by signal worker")
+
+		// Закрываем канал и ждем завершения воркеров
+		close(urlChan)
+		wg.Wait()
+
+		logger.Log.Info("Server shutdown completed")
+	}
 }
