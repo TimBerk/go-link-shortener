@@ -7,7 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
@@ -16,7 +20,7 @@ import (
 	"github.com/TimBerk/go-link-shortener/internal/app/store/json"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/local"
 	"github.com/TimBerk/go-link-shortener/internal/app/store/pg"
-	"github.com/TimBerk/go-link-shortener/internal/app/workers"
+	"github.com/TimBerk/go-link-shortener/internal/app/worker"
 	_ "github.com/TimBerk/go-link-shortener/swagger"
 )
 
@@ -47,7 +51,7 @@ func main() {
 	printBuildInfo()
 
 	cfg := config.InitConfig()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer cancel()
 
 	errLogs := logger.Initialize(cfg.LogLevel)
@@ -57,7 +61,6 @@ func main() {
 
 	generator := store.NewIDGenerator()
 	urlChan := make(chan store.URLPair, 1000)
-	signalChan := make(chan os.Signal, 1)
 
 	var dataStore store.Store
 	var errStore error
@@ -76,11 +79,7 @@ func main() {
 	// Запускаем воркер
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go workers.Worker(ctx, dataStore, urlChan, &wg)
-
-	// Запускаем воркер для сигналов
-	wg.Add(1)
-	go workers.SignalWorker(ctx, cancel, signalChan, &wg)
+	go worker.Worker(ctx, dataStore, urlChan, &wg)
 
 	router := router.RegisterRouters(dataStore, cfg, ctx, urlChan)
 
@@ -91,17 +90,17 @@ func main() {
 		if !cfg.EnableHTTPS {
 			errRun = http.ListenAndServe(cfg.ServerAddress, router)
 		} else {
-			certFile := "cert.pem"
-			if _, err := os.Stat(certFile); os.IsNotExist(err) {
-				logger.Log.WithField("file", certFile).Fatal("Certificate file is not found", err)
+			certManager := &autocert.Manager{
+				Prompt:     autocert.AcceptTOS,
+				HostPolicy: autocert.HostWhitelist("test.com", "www.test.com"),
+				Cache:      autocert.DirCache("certs"),
 			}
-
-			keyFile := "key.pem"
-			if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-				logger.Log.WithField("file", keyFile).Fatal("Key file is not found", err)
+			server := &http.Server{
+				Addr:      ":443",
+				Handler:   router,
+				TLSConfig: certManager.TLSConfig(),
 			}
-
-			errRun = http.ListenAndServeTLS(cfg.ServerAddress, certFile, keyFile, router)
+			errRun = server.ListenAndServeTLS("", "")
 		}
 
 		if errRun != nil && !errors.Is(errRun, http.ErrServerClosed) {

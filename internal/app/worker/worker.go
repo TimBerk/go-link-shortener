@@ -1,5 +1,5 @@
 // Package workers необходим для обработки фоновых задач
-package workers
+package worker
 
 import (
 	"context"

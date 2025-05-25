@@ -3,6 +3,7 @@
 package config
 
 import (
+	"cmp"
 	"encoding/json"
 	"flag"
 	"os"
@@ -62,11 +63,15 @@ func InitConfig() *Config {
 	flag.Parse()
 
 	cfgJSON := JSONFile{}
-	if envConfigFile == "" {
-		envConfigFile = os.Getenv("CONFIG")
-	}
+	var configPath string
 	if envConfigFile != "" {
-		file, errReadFile := os.ReadFile(envConfigFile)
+		configPath = envConfigFile
+	} else if cfg.ConfigFile != "" {
+		configPath = cfg.ConfigFile
+	}
+
+	if configPath != "" {
+		file, errReadFile := os.ReadFile(configPath)
 		if errReadFile != nil {
 			logrus.Warning("Couldn't read config file", errReadFile)
 		} else {
@@ -76,51 +81,23 @@ func InitConfig() *Config {
 		}
 	}
 
-	if envServerAddress != "" {
-		cfg.ServerAddress = envServerAddress
-	} else if cfgJSON.ServerAddress != "" {
-		cfg.ServerAddress = cfgJSON.ServerAddress
-	}
+	cfg.LogLevel = cmp.Or(envLogLevel, cfg.LogLevel)
+	cfg.ServerAddress = cmp.Or(envServerAddress, cfgJSON.ServerAddress, cfg.ServerAddress)
+	cfg.BaseURL = cmp.Or(envBaseURL, cfgJSON.BaseURL, cfg.BaseURL)
+	cfg.FileStoragePath = cmp.Or(envFileStoragePath, cfgJSON.FileStoragePath, cfg.FileStoragePath)
+	cfg.DatabaseDSN = cmp.Or(envDatabaseDSN, cfgJSON.DatabaseDSN, cfg.DatabaseDSN)
 
-	if envBaseURL != "" {
-		cfg.BaseURL = envBaseURL
-	} else if cfgJSON.BaseURL != "" {
-		cfg.BaseURL = cfgJSON.BaseURL
+	boolLocalStore, err := strconv.ParseBool(strings.ToLower(envUseLocalStore))
+	if err != nil {
+		boolLocalStore = false
 	}
+	cfg.UseLocalStore = cmp.Or(boolLocalStore, cfg.UseLocalStore)
 
-	if envLogLevel != "" {
-		cfg.LogLevel = envLogLevel
+	boolHTTPS, err := strconv.ParseBool(strings.ToLower(envEnableHTTPS))
+	if err != nil {
+		boolHTTPS = false
 	}
-	if envFileStoragePath != "" {
-		cfg.FileStoragePath = envFileStoragePath
-	} else if cfgJSON.FileStoragePath != "" {
-		cfg.FileStoragePath = cfgJSON.FileStoragePath
-	}
-
-	if envUseLocalStore != "" {
-		boolVar, err := strconv.ParseBool(strings.ToLower(envUseLocalStore))
-		if err != nil {
-			boolVar = false
-		}
-
-		cfg.UseLocalStore = boolVar
-	}
-	if envDatabaseDSN != "" {
-		cfg.DatabaseDSN = envDatabaseDSN
-	} else if cfgJSON.DatabaseDSN != "" {
-		cfg.DatabaseDSN = cfgJSON.DatabaseDSN
-	}
-
-	if envEnableHTTPS != "" {
-		boolVar, err := strconv.ParseBool(strings.ToLower(envEnableHTTPS))
-		if err != nil {
-			boolVar = false
-		}
-
-		cfg.EnableHTTPS = boolVar
-	} else if cfgJSON.EnableHTTPS {
-		cfg.EnableHTTPS = cfgJSON.EnableHTTPS
-	}
+	cfg.EnableHTTPS = cmp.Or(boolHTTPS, cfgJSON.EnableHTTPS, cfg.EnableHTTPS)
 
 	return cfg
 }
