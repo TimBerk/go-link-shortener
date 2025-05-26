@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"golang.org/x/crypto/acme/autocert"
 
@@ -83,42 +84,50 @@ func main() {
 
 	router := router.RegisterRouters(dataStore, cfg, ctx, urlChan)
 
-	serverErrChan := make(chan error, 1)
+	var server *http.Server // Объявляем переменную сервера на уровне функции
 	go func() {
 		logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
-		var errRun error
+
 		if !cfg.EnableHTTPS {
-			errRun = http.ListenAndServe(cfg.ServerAddress, router)
+			server = &http.Server{
+				Addr:    cfg.ServerAddress,
+				Handler: router,
+			}
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Log.Fatalf("HTTP server error: %v", err)
+			}
 		} else {
 			certManager := &autocert.Manager{
 				Prompt:     autocert.AcceptTOS,
 				HostPolicy: autocert.HostWhitelist("test.com", "www.test.com"),
 				Cache:      autocert.DirCache("certs"),
 			}
-			server := &http.Server{
+			server = &http.Server{
 				Addr:      ":443",
 				Handler:   router,
 				TLSConfig: certManager.TLSConfig(),
 			}
-			errRun = server.ListenAndServeTLS("", "")
-		}
-
-		if errRun != nil && !errors.Is(errRun, http.ErrServerClosed) {
-			serverErrChan <- errRun
+			if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Log.Fatalf("HTTPS server error: %v", err)
+			}
 		}
 	}()
 
-	// Основной цикл обработки
-	select {
-	case err := <-serverErrChan:
-		logger.Log.Fatalf("Server error: %v", err)
-	case <-ctx.Done():
-		logger.Log.Info("Shutdown initiated by signal worker")
+	// Ожидаем сигнал завершения
+	<-ctx.Done()
+	logger.Log.Info("Shutdown initiated by signal worker")
 
-		// Закрываем канал и ждем завершения воркеров
-		close(urlChan)
-		wg.Wait()
+	// Graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-		logger.Log.Info("Server shutdown completed")
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Errorf("Server shutdown error: %v", err)
+	} else {
+		logger.Log.Info("Server stopped gracefully")
 	}
+
+	close(urlChan)
+	wg.Wait()
+	logger.Log.Info("Server shutdown completed")
 }
