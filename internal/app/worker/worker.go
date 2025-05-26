@@ -1,4 +1,4 @@
-// Package worker обрабатывает в фоне удаление пачек данных
+// Package workers необходим для обработки фоновых задач
 package worker
 
 import (

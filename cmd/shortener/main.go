@@ -3,10 +3,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+	"time"
+
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
@@ -45,8 +51,9 @@ func printBuildInfo() {
 func main() {
 	printBuildInfo()
 
-	ctx := context.Background()
 	cfg := config.InitConfig()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer cancel()
 
 	errLogs := logger.Initialize(cfg.LogLevel)
 	if errLogs != nil {
@@ -76,13 +83,51 @@ func main() {
 	go worker.Worker(ctx, dataStore, urlChan, &wg)
 
 	router := router.RegisterRouters(dataStore, cfg, ctx, urlChan)
-	logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
-	err := http.ListenAndServe(cfg.ServerAddress, router)
-	if err != nil {
-		logger.Log.Fatal("ListenAndServe: ", err)
+
+	var server *http.Server // Объявляем переменную сервера на уровне функции
+	go func() {
+		logger.Log.WithField("address", cfg.ServerAddress).Info("Starting server")
+
+		if !cfg.EnableHTTPS {
+			server = &http.Server{
+				Addr:    cfg.ServerAddress,
+				Handler: router,
+			}
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Log.Fatalf("HTTP server error: %v", err)
+			}
+		} else {
+			certManager := &autocert.Manager{
+				Prompt:     autocert.AcceptTOS,
+				HostPolicy: autocert.HostWhitelist("test.com", "www.test.com"),
+				Cache:      autocert.DirCache("certs"),
+			}
+			server = &http.Server{
+				Addr:      ":443",
+				Handler:   router,
+				TLSConfig: certManager.TLSConfig(),
+			}
+			if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Log.Fatalf("HTTPS server error: %v", err)
+			}
+		}
+	}()
+
+	// Ожидаем сигнал завершения
+	<-ctx.Done()
+	logger.Log.Info("Shutdown initiated by signal worker")
+
+	// Graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Errorf("Server shutdown error: %v", err)
+	} else {
+		logger.Log.Info("Server stopped gracefully")
 	}
 
-	// Закрываем канал и ждем завершения воркера
 	close(urlChan)
 	wg.Wait()
+	logger.Log.Info("Server shutdown completed")
 }
