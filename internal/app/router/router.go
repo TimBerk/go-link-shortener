@@ -3,8 +3,9 @@ package router
 
 import (
 	"context"
-	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/checker"
 	"net/http/pprof"
+
+	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/checker"
 
 	"github.com/go-chi/chi/v5"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -33,8 +34,6 @@ func addPprof(router chi.Router) {
 // RegisterRouters - регистрирует пути приложения
 func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Context, urlChan chan store.URLPair) chi.Router {
 	h := handler.NewHandler(dataStore, cfg, ctx, urlChan)
-
-	logger.Log.WithField("cfg", cfg).Info("Starting settings")
 
 	router := chi.NewRouter()
 	router.Use(logger.RequestLogger)

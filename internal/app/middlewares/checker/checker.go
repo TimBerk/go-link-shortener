@@ -2,12 +2,13 @@
 package checker
 
 import (
-	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
-	"github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
 )
 
 // TrustedSubnetMiddleware - обработчик запросов для проверки доступности IP
