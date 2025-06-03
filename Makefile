@@ -48,3 +48,10 @@ cpup:
 	(PPROF_TMPDIR=${PPROFDIR} go tool pprof -http :8081 http://127.0.0.1:8080/debug/pprof/profile)
 mpup:
 	(PPROF_TMPDIR=${PPROFDIR} go tool pprof -http :8081 http://127.0.0.1:8080/debug/pprof/heap)
+
+
+.PHONY: generate
+generate:
+	protoc --go_out=. --go_opt=paths=source_relative \
+		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+		api/shortener.proto

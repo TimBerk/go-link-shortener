@@ -58,6 +58,23 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/internal/stats": {
+            "get": {
+                "description": "Возвращает количество ссылок и пользователей в приложении",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Получить статистику",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/StatsRequestJSON"
+                        }
+                    }
+                }
+            }
+        },
         "/api/shorten": {
             "post": {
                 "description": "Создает короткую версию переданного URL",
@@ -309,6 +326,17 @@ const docTemplate = `{
             "properties": {
                 "result": {
                     "type": "string"
+                }
+            }
+        },
+        "StatsRequestJSON": {
+            "type": "object",
+            "properties": {
+                "urls": {
+                    "type": "integer"
+                },
+                "users": {
+                    "type": "integer"
                 }
             }
         },

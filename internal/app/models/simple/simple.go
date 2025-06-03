@@ -12,3 +12,9 @@ type RequestJSON struct {
 type ResponseJSON struct {
 	Result string `json:"result"`
 }
+
+// StatsRequestJSON описывает параметры ответа для статистики
+type StatsRequestJSON struct {
+	URLs  int64 `json:"urls"`
+	Users int64 `json:"users"`
+}
