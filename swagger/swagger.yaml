@@ -23,7 +23,14 @@ definitions:
       result:
         type: string
     type: object
-  ErrorResponse:
+  StatsRequestJSON:
+    properties:
+      urls:
+        type: integer
+      users:
+        type: integer
+    type: object
+  internal_app_handler.ErrorResponse:
     properties:
       error:
         example: error message
@@ -81,6 +88,17 @@ paths:
           schema:
             type: string
       summary: Перенаправить по короткому URL
+  /api/internal/stats:
+    get:
+      description: Возвращает количество ссылок и пользователей в приложении
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/StatsRequestJSON'
+      summary: Получить статистику
   /api/shorten:
     post:
       consumes:
@@ -103,7 +121,7 @@ paths:
         "400":
           description: Неверный запрос
           schema:
-            $ref: '#/definitions/ErrorResponse'
+            $ref: '#/definitions/internal_app_handler.ErrorResponse'
         "409":
           description: Conflict
           schema:
@@ -139,11 +157,11 @@ paths:
         "400":
           description: Неверный запрос
           schema:
-            $ref: '#/definitions/ErrorResponse'
+            $ref: '#/definitions/internal_app_handler.ErrorResponse'
         "500":
           description: Ошибка сервера
           schema:
-            $ref: '#/definitions/ErrorResponse'
+            $ref: '#/definitions/internal_app_handler.ErrorResponse'
       summary: Пакетное создание коротких URL
   /api/user/urls:
     delete:
@@ -167,7 +185,7 @@ paths:
         "400":
           description: Неверный запрос
           schema:
-            $ref: '#/definitions/ErrorResponse'
+            $ref: '#/definitions/internal_app_handler.ErrorResponse'
         "401":
           description: Пользователь не авторизован
           schema:

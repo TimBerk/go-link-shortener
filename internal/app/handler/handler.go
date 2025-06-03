@@ -342,3 +342,35 @@ func (h *Handler) DeleteURLsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
 }
+
+// StatsHandler отображает статистику по Url и пользователям
+// @Summary Получить статистику
+// @Description Возвращает количество ссылок и пользователей в приложении
+// @Produce json
+// @Success 200 {object} simple.StatsRequestJSON
+// @Router /api/internal/stats [get]
+func (h *Handler) StatsHandler(w http.ResponseWriter, r *http.Request) {
+	countURLs, err := h.store.GetURLCount(h.ctx)
+	if err != nil {
+		logrus.WithField("err", err).Error("Failed to get count urls")
+		utils.WriteJSONError(w, "Failed to get count urls", http.StatusInternalServerError)
+		return
+	}
+
+	countUsers, err := h.store.GetUserCount(h.ctx)
+	if err != nil {
+		logrus.WithField("err", err).Error("Failed to get count users")
+		utils.WriteJSONError(w, "Failed to get count users", http.StatusInternalServerError)
+		return
+	}
+
+	responseJSON := simple.StatsRequestJSON{URLs: countURLs, Users: countUsers}
+	response, err := easyjson.Marshal(responseJSON)
+	if err != nil {
+		utils.WriteJSONError(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

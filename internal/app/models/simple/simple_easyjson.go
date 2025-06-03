@@ -18,7 +18,80 @@ var (
 	_ easyjson.Marshaler
 )
 
-func DecodeModels(in *jlexer.Lexer, out *ResponseJSON) {
+func DecodeSimple(in *jlexer.Lexer, out *StatsRequestJSON) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "urls":
+			out.URLs = int64(in.Int64())
+		case "users":
+			out.Users = int64(in.Int64())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func EncodeSimple(out *jwriter.Writer, in StatsRequestJSON) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"urls\":"
+		out.RawString(prefix[1:])
+		out.Int64(int64(in.URLs))
+	}
+	{
+		const prefix string = ",\"users\":"
+		out.RawString(prefix)
+		out.Int64(int64(in.Users))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v StatsRequestJSON) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	EncodeSimple(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v StatsRequestJSON) MarshalEasyJSON(w *jwriter.Writer) {
+	EncodeSimple(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *StatsRequestJSON) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	DecodeSimple(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *StatsRequestJSON) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	DecodeSimple(l, v)
+}
+func DecodeSimple1(in *jlexer.Lexer, out *ResponseJSON) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -49,7 +122,7 @@ func DecodeModels(in *jlexer.Lexer, out *ResponseJSON) {
 		in.Consumed()
 	}
 }
-func EncodeModels(out *jwriter.Writer, in ResponseJSON) {
+func EncodeSimple1(out *jwriter.Writer, in ResponseJSON) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -64,27 +137,27 @@ func EncodeModels(out *jwriter.Writer, in ResponseJSON) {
 // MarshalJSON supports json.Marshaler interface
 func (v ResponseJSON) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	EncodeModels(&w, v)
+	EncodeSimple1(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v ResponseJSON) MarshalEasyJSON(w *jwriter.Writer) {
-	EncodeModels(w, v)
+	EncodeSimple1(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *ResponseJSON) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	DecodeModels(&r, v)
+	DecodeSimple1(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *ResponseJSON) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	DecodeModels(l, v)
+	DecodeSimple1(l, v)
 }
-func DecodeModels1(in *jlexer.Lexer, out *RequestJSON) {
+func DecodeSimple2(in *jlexer.Lexer, out *RequestJSON) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -115,7 +188,7 @@ func DecodeModels1(in *jlexer.Lexer, out *RequestJSON) {
 		in.Consumed()
 	}
 }
-func EncodeModels1(out *jwriter.Writer, in RequestJSON) {
+func EncodeSimple2(out *jwriter.Writer, in RequestJSON) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -130,23 +203,23 @@ func EncodeModels1(out *jwriter.Writer, in RequestJSON) {
 // MarshalJSON supports json.Marshaler interface
 func (v RequestJSON) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	EncodeModels1(&w, v)
+	EncodeSimple2(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v RequestJSON) MarshalEasyJSON(w *jwriter.Writer) {
-	EncodeModels1(w, v)
+	EncodeSimple2(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *RequestJSON) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	DecodeModels1(&r, v)
+	DecodeSimple2(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *RequestJSON) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	DecodeModels1(l, v)
+	DecodeSimple2(l, v)
 }

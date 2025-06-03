@@ -186,3 +186,28 @@ func (s *JSONStore) DeleteURL(ctx context.Context, batch []store.URLPair) error 
 
 	return nil
 }
+
+// GetURLCount returns the total number of shortened URLs in the JSON store
+func (s *JSONStore) GetURLCount(ctx context.Context) (int64, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	count := int64(len(s.storage))
+	return count, nil
+}
+
+// GetUserCount returns the total number of unique users in the JSON store
+func (s *JSONStore) GetUserCount(ctx context.Context) (int64, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	userSet := make(map[string]struct{})
+	for _, record := range s.storage {
+		if record.UserID != "" {
+			userSet[record.UserID] = struct{}{}
+		}
+	}
+
+	count := int64(len(userSet))
+	return count, nil
+}
