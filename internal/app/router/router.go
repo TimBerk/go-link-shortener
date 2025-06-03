@@ -3,6 +3,7 @@ package router
 
 import (
 	"context"
+	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/checker"
 	"net/http/pprof"
 
 	"github.com/go-chi/chi/v5"
@@ -33,9 +34,16 @@ func addPprof(router chi.Router) {
 func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Context, urlChan chan store.URLPair) chi.Router {
 	h := handler.NewHandler(dataStore, cfg, ctx, urlChan)
 
+	logger.Log.WithField("cfg", cfg).Info("Starting settings")
+
 	router := chi.NewRouter()
 	router.Use(logger.RequestLogger)
 	router.Use(compress.GzipMiddleware)
+
+	if cfg.TrustedSubnet != "" {
+		router.Use(checker.TrustedSubnetMiddleware(cfg))
+		router.Get("/api/internal/stats", h.StatsHandler)
+	}
 
 	addPprof(router)
 
