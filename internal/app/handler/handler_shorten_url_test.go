@@ -19,7 +19,7 @@ import (
 func TestShortenURL(t *testing.T) {
 	ctx := context.Background()
 	urlChan := make(chan store.URLPair, 1000)
-	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true)
+	mockConfig := config.NewConfig("localhost:8021", "http://base.loc", true, "192.168.1.0/24")
 	mockStore := new(MockURLStore)
 	testHandler := NewHandler(mockStore, mockConfig, ctx, urlChan)
 	testCookie := mockCookie(userID)

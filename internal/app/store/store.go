@@ -38,6 +38,10 @@ type Store interface {
 	Ping(ctx context.Context) error
 	// DeleteURL удаляет ссылку пользователя
 	DeleteURL(ctx context.Context, batch []URLPair) error
+	// GetURLCount возвращает количество ссылок
+	GetURLCount(ctx context.Context) (int64, error)
+	// GetUserCount возвращает количество пользователей
+	GetUserCount(ctx context.Context) (int64, error)
 }
 
 // IDGenerator генератор ссылок

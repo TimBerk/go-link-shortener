@@ -5,6 +5,8 @@ import (
 	"context"
 	"net/http/pprof"
 
+	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/checker"
+
 	"github.com/go-chi/chi/v5"
 	httpSwagger "github.com/swaggo/http-swagger"
 
@@ -36,6 +38,11 @@ func RegisterRouters(dataStore store.Store, cfg *config.Config, ctx context.Cont
 	router := chi.NewRouter()
 	router.Use(logger.RequestLogger)
 	router.Use(compress.GzipMiddleware)
+
+	if cfg.TrustedSubnet != "" {
+		router.Use(checker.TrustedSubnetMiddleware(cfg))
+		router.Get("/api/internal/stats", h.StatsHandler)
+	}
 
 	addPprof(router)
 

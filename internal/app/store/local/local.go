@@ -110,3 +110,27 @@ func (s *URLStore) DeleteURL(ctx context.Context, batch []store.URLPair) error {
 
 	return nil
 }
+
+// GetURLCount returns the total number of shortened URLs in the store
+func (s *URLStore) GetURLCount(ctx context.Context) (int64, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	count := int64(len(s.linksMap))
+	return count, nil
+}
+
+// GetUserCount returns the total number of unique users in the store
+func (s *URLStore) GetUserCount(ctx context.Context) (int64, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// Count unique users by checking userMap values
+	userSet := make(map[string]struct{})
+	for _, userID := range s.userMap {
+		userSet[userID] = struct{}{}
+	}
+
+	count := int64(len(userSet))
+	return count, nil
+}

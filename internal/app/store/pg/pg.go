@@ -311,3 +311,29 @@ func (pg *PostgresStore) DeleteURL(ctx context.Context, batch []store.URLPair) e
 	_, err := pg.db.Exec(ctx, query, shortURLs, userIDs)
 	return err
 }
+
+// GetURLCount returns the total number of URLs in the database
+func (pg *PostgresStore) GetURLCount(ctx context.Context) (int64, error) {
+	var count int64
+	const query = `SELECT COUNT(*) FROM urls WHERE deleted_at IS NULL`
+
+	err := pg.db.QueryRow(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get URL count: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetUserCount returns the total number of users in the database
+func (pg *PostgresStore) GetUserCount(ctx context.Context) (int64, error) {
+	var count int64
+	const query = `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`
+
+	err := pg.db.QueryRow(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get user count: %w", err)
+	}
+
+	return count, nil
+}

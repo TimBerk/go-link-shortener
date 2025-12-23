@@ -33,6 +33,7 @@ type Config struct {
 	DatabaseDSN     string
 	EnableHTTPS     bool   `envconfig:"ENABLE_HTTPS" default:"false"`
 	ConfigFile      string `envconfig:"CONFIG"`
+	TrustedSubnet   string `envconfig:"TRUSTED_SUBNET" default:""`
 }
 
 // InitConfig Инициализирует и устанавливает значения для переменных окружения
@@ -86,6 +87,7 @@ func InitConfig() *Config {
 	cfg.BaseURL = cmp.Or(envBaseURL, cfgJSON.BaseURL, cfg.BaseURL)
 	cfg.FileStoragePath = cmp.Or(envFileStoragePath, cfgJSON.FileStoragePath, cfg.FileStoragePath)
 	cfg.DatabaseDSN = cmp.Or(envDatabaseDSN, cfgJSON.DatabaseDSN, cfg.DatabaseDSN)
+	cfg.TrustedSubnet = cmp.Or(cfgJSON.DatabaseDSN, cfg.TrustedSubnet)
 
 	boolLocalStore, err := strconv.ParseBool(strings.ToLower(envUseLocalStore))
 	if err != nil {
@@ -103,11 +105,12 @@ func InitConfig() *Config {
 }
 
 // NewConfig Инициализирует минимальные настройки
-func NewConfig(serverAddress, baseURL string, useLocalStore bool) *Config {
+func NewConfig(serverAddress, baseURL string, useLocalStore bool, trustedSubnet string) *Config {
 	return &Config{
 		ServerAddress: serverAddress,
 		BaseURL:       baseURL,
 		UseLocalStore: useLocalStore,
 		EnableHTTPS:   false,
+		TrustedSubnet: trustedSubnet,
 	}
 }

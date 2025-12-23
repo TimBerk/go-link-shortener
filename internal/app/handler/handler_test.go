@@ -55,3 +55,13 @@ func (m *MockURLStore) DeleteURL(ctx context.Context, batch []store.URLPair) err
 	args := m.Called(ctx, batch)
 	return args.Error(0)
 }
+
+func (m *MockURLStore) GetURLCount(ctx context.Context) (int64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockURLStore) GetUserCount(ctx context.Context) (int64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int64), args.Error(1)
+}

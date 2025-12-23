@@ -19,6 +19,8 @@ type MockStore struct {
 	exists      bool
 	addedURL    string
 	addedURLs   batch.BatchRequest
+	urlCount    int64
+	userCount   int64
 }
 
 func (m *MockStore) GetOriginalURL(ctx context.Context, shortURL string, userID string) (string, bool, bool) {
@@ -46,10 +48,18 @@ func (m *MockStore) DeleteURL(ctx context.Context, batch []store.URLPair) error 
 	return nil
 }
 
+func (m *MockStore) GetURLCount(ctx context.Context) (int64, error) {
+	return m.urlCount, nil
+}
+
+func (m *MockStore) GetUserCount(ctx context.Context) (int64, error) {
+	return m.userCount, nil
+}
+
 func TestShortenURL_Success(t *testing.T) {
 	ctx := context.Background()
 	urlChan := make(chan store.URLPair, 1000)
-	mockConfig := config.NewConfig("localhost:8021", "http://base.url", true)
+	mockConfig := config.NewConfig("localhost:8021", "http://base.url", true, "192.168.1.0/24")
 	mockStore := &MockStore{}
 	handler := NewHandler(mockStore, mockConfig, ctx, urlChan)
 	body := strings.NewReader("https://example.com")
@@ -67,7 +77,7 @@ func TestShortenURL_Success(t *testing.T) {
 func TestRedirect_Success(t *testing.T) {
 	ctx := context.Background()
 	urlChan := make(chan store.URLPair, 1000)
-	mockConfig := config.NewConfig("localhost:8021", "http://base:url", true)
+	mockConfig := config.NewConfig("localhost:8021", "http://base.url", true, "192.168.1.0/24")
 	mockStore := &MockStore{
 		originalURL: "https://example.com",
 		exists:      true,

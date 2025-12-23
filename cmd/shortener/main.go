@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,8 +14,11 @@ import (
 	"time"
 
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
 
+	"github.com/TimBerk/go-link-shortener/api/gen"
 	"github.com/TimBerk/go-link-shortener/internal/app/config"
+	"github.com/TimBerk/go-link-shortener/internal/app/handler"
 	"github.com/TimBerk/go-link-shortener/internal/app/middlewares/logger"
 	"github.com/TimBerk/go-link-shortener/internal/app/router"
 	"github.com/TimBerk/go-link-shortener/internal/app/store"
@@ -76,6 +80,23 @@ func main() {
 	if errStore != nil {
 		logger.Log.Fatal("Read Store: ", errStore)
 	}
+
+	// Создаем gRPC сервер
+	grpcServer := grpc.NewServer()
+	grpcHandler := handler.NewGRPCHandler(handler.NewHandler(dataStore, cfg, ctx, urlChan))
+	gen.RegisterShortenerServer(grpcServer, grpcHandler)
+
+	// Запускаем gRPC сервер в отдельной горутине
+	go func() {
+		lis, err := net.Listen("tcp", ":50051")
+		if err != nil {
+			logger.Log.Fatalf("failed to listen: %v", err)
+		}
+		logger.Log.Info("Starting gRPC server on port 50051")
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Log.Fatalf("failed to serve gRPC: %v", err)
+		}
+	}()
 
 	// Запускаем воркер
 	var wg sync.WaitGroup
